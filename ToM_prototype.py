@@ -33,7 +33,7 @@ input_args = sys.argv[1:]
 if len(input_args):
     config_file = input_args[0]
 else:
-    config_file = st.secrets.get("CONFIG_FILE", "example_config.toml")
+    config_file = st.secrets.get("CONFIG_FILE", "ToM_config.toml")
 print(f"Configuring app using {config_file}...\n")
 
 # Create prompts based on configuration file
