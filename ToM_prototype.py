@@ -46,8 +46,8 @@ DEBUG = False
 smith_client = Client()
 
 
-st.set_page_config(page_title="Study bot", page_icon="📖")
-st.title("📖 Study bot")
+st.set_page_config(page_title="Interview bot", page_icon="📖")
+st.title("📖 Interview bot")
 
 
 ## initialising key variables in st.sessionstate if first run
