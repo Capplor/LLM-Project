@@ -43,7 +43,7 @@ language_type = "Use empathetic and youth-friendly language while maintaining a 
 intro = """
 Hi there -- I'm collecting stories about social misunderstandings and possible reasons for them in the hope to explore and improve real-world social understanding. I'd appreciate if you could share your experience with me by answering a few questions.
 
-I'll start with gathering a specific situation you remember and then move onto more general questions.
+I'll start with gathering a specific situation you remember and then move onto more general questions. If that is ok, type "Cool".
 """
 
 questions = [
