@@ -50,7 +50,7 @@ questions = [
     "Think about a time where you misunderstood someone else or were surprised by them. Could you describe what happened?",
     "Why did you assume something? Were you surprised when they behaved differently?",
     "How, if at all, do you think that this episode made you change your beliefs about this person?",
-    "Do you think about certain characteristics of this person (e.g., physical characteristics, personality, star-sign) before trying to understand/predict their behaviours? If yes, which ones?",
+    "Keeping this situation in mind, do you think about certain characteristics of this person (e.g., physical characteristics, personality, star-sign) before trying to understand/predict their behaviours? If yes, which ones?",
     "Do you think people are divided into clear types, can be seen on a scale or somewhere in between (e.g., sporty vs not sporty or somewhere in between not very sporty and very sporty)? Can you give an example?",
     "Do you think it is easier to understand people who are similar to you? Why?",
     "Do you think physical characteristics (e.g., eye colour) play a role in shaping your predictions? Why?",
@@ -72,9 +72,10 @@ If the human tries to ask you a question, politely refuse and return to the ques
 
 what = "What happened?"
 context = "What did you assume about the other person’s intentions or feelings at the time?"
-procedure = "How did they reach their conclusion and what changed?"
+procedure = "How did you reach their conclusion and what changed?"
 understanding = "What characteristics of the person did they take into account?"
-social_perception = "How do they see others' characteristics?"
+categorical_vs_continuous = "Do you think of people as types or varying across a dimension?"
+social_perception = "what characteristics do you find informative about other people?"
 
 [summaries.personas]
 
@@ -109,10 +110,10 @@ Question: Why did you assume something? Were you surprised when they behaved dif
 Answer: "His appearance (muscular, tattoos) made me think he'd be cold. I was genuinely surprised when he acted kindly."
 Question: How, if at all, do you think that this episode made you change your beliefs about this person?
 Answer: "I learned he's just reserved, not unfriendly. Now I try not to judge people based on first impressions."
-Question: Do you think about certain characteristics of this person (e.g., height, personality, star-sign)\
+Question: Do you think about certain characteristics of this man at the gym (e.g., height, personality, star-sign)\
           before trying to understand/predict their behaviours? If yes, which ones?
 Answer: "Only his appearance (muscles and tattoos). I don't believe things like star signs affect behavior."
-Question: Do you think people are divided into clear types, can be seen on a spectrum or somewhere in between? Can you give an example?
+Question: Keeping what happened with this man in mind, Do you think people are divided into clear types, can be seen on a spectrum or somewhere in between? Can you give an example?
 Answer:"I don't think people fit into neat boxes or simple spectrums. Sure, we might put someone 'somewhere' like quiet-to-loud,\
         but that still misses how they act differently in different situations. \
         Take my neighbor: most days he's a serious accountant (you'd put him on the 'formal' end of a spectrum), \
