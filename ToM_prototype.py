@@ -641,17 +641,27 @@ def finaliseScenario():
                 # clicking the "keep adapting" button will force streamlit to refresh the page 
                 # --> this loop will run again.  
                 c2.button("Keep adapting")
-
-
-                ## TODO -- add an opportunity for people to rewrite the scenario themselves. 
-                # The implementation below wasn't very aesthetically pleasing. 
-
-                # popover_rewrite = c3.popover("I'll rewrite it myself")
-                # with popover_rewrite:
-                #     txt = st.text_area("Edit the scenario yourself and press command + Enter when you're happy with it",value=new_response['new_scenario'], on_change=test_area)            
-
-
-            
+    
+    # Add the feedback section at the same level as the main if-else block
+    if package['judgment'] == "Ready as is!" or 'feedback_collected' in st.session_state:
+        if 'feedback_collected' not in st.session_state:
+            st.markdown("---")
+            st.markdown("### Final Feedback")
+            feedback = st.text_area(
+                "Why did you like this scenario over others?",
+                placeholder="Please share your thoughts on why you preferred this scenario..."
+            )
+            if st.button("Submit Feedback"):
+                # Store the feedback
+                st.session_state.scenario_package['preference_feedback'] = feedback
+                st.session_state['feedback_collected'] = True
+                st.rerun()
+        else:
+            # Show closing message after feedback is submitted
+            st.markdown("---")
+            st.markdown("## Thank you for participating!")
+            st.markdown("### Please return to Prolific to complete the study.")
+            st.markdown("*This chat session is now complete.*")
 
 def stateAgent(): 
     """ Main flow function of the whole interaction -- keeps track of the system state and calls the appropriate procedure on each streamlit refresh. 
