@@ -187,10 +187,6 @@ def save_to_public_google_sheet():
     sheet.append_row(row)
     st.success("Data saved successfully!")
 
-        
-    except Exception as e:
-        st.error(f"Error saving data: {str(e)}")
-
 
 
 def extractChoices(msgs, testing ):
