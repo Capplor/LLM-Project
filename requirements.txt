@@ -6,3 +6,5 @@ langsmith
 streamlit_feedback
 streamlit
 st-gsheets-connection
+pandas
+gspread
