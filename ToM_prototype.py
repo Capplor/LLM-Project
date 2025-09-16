@@ -21,7 +21,7 @@ import sys
 from llm_config import LLMConfig
 
 import streamlit as st
-import panda as pd
+import pandas as pd
 
 
 # Using streamlit secrets to set environment variables for langsmith/chain
