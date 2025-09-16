@@ -10,7 +10,7 @@ from langsmith import Client
 from langsmith import traceable
 from langsmith.run_helpers import get_current_run_tree
 from streamlit_feedback import streamlit_feedback
-
+from streamlit_gsheets import GSheetsConnection
 from functools import partial
 
 import os
@@ -26,7 +26,8 @@ os.environ["OPENAI_API_KEY"] = st.secrets['OPENAI_API_KEY']
 os.environ["LANGCHAIN_API_KEY"] = st.secrets['LANGCHAIN_API_KEY']
 os.environ["LANGCHAIN_PROJECT"] = st.secrets['LANGCHAIN_PROJECT']
 os.environ["LANGCHAIN_TRACING_V2"] = 'true'
-
+os.environ["SPREADSHEET_URL"] = st.secrets['SPREADSHEET_URL']
+conn = st.connection("gsheets", type=GSheetsConnection)
 
 # Parse input args, checking for config file
 input_args = sys.argv[1:]
@@ -157,6 +158,73 @@ def getData (testing = False ):
  
         
         #st.text(st.write(response))
+def save_to_public_google_sheet():
+    """
+    Save data to a public Google Sheet (no authentication required)
+    """
+    try:
+        # Get the spreadsheet URL from environment variables
+        spreadsheet_url = os.environ.get("SPREADSHEET_URL")
+        
+        # Open the spreadsheet
+        gc = gspread.service_account()  # This will still try to use auth, so we need a different approach
+        
+        sheet_id = spreadsheet_url.split('/d/')[1].split('/')[0]
+        sh = gc.open_by_key(sheet_id)
+        
+        # Try to get the worksheet, or create it if it doesn't exist
+        try:
+            worksheet = sh.worksheet('Form Responses 1')
+        except gspread.exceptions.WorksheetNotFound:
+            worksheet = sh.add_worksheet(title='Form Responses 1', rows=100, cols=13)
+
+        # Define headers
+        headers = [
+            "participant_number",
+            "q1", "q2", "q3", "q4", "q5", "q6", "q7",
+            "sum1", "sum2", "sum3",
+            "selected",
+            "feedback"
+        ]
+
+        # Get all values to check if the sheet is empty or only contains empty rows
+        existing = worksheet.get_all_values()
+        # If the sheet is empty or the first row is not the header, insert the header as the first row
+        if not existing or existing[0] != headers:
+            worksheet.insert_row(headers, 1)
+
+        # Get the data from session state
+        package = st.session_state.scenario_package
+        answers = package['answer set']
+        
+        # Extract participant ID from the first message
+        participant_id = ""
+        if msgs.messages and msgs.messages[0].type == "human":
+            participant_id = msgs.messages[0].content
+
+        # Prepare the row in the order of headers
+        row = [
+            participant_id,
+            answers.get('q1', ''),
+            answers.get('q2', ''),
+            answers.get('q3', ''),
+            answers.get('q4', ''),
+            answers.get('q5', ''),
+            answers.get('q6', ''),
+            answers.get('q7', ''),
+            package['scenarios_all']['col1'],
+            package['scenarios_all']['col2'],
+            package['scenarios_all']['col3'],
+            package['scenario'],
+            package.get('preference_feedback', '')
+        ]
+        
+        worksheet.append_row(row)
+        st.success("Data saved successfully!")
+        
+    except Exception as e:
+        st.error(f"Error saving data: {str(e)}")
+
 
 
 def extractChoices(msgs, testing ):
@@ -651,10 +719,14 @@ def finaliseScenario():
                 "Why did you like this scenario over others?",
                 placeholder="Please share your thoughts on why you preferred this scenario..."
             )
-            if st.button("Submit Feedback"):
+             if st.button("Submit Feedback"):
                 # Store the feedback
                 st.session_state.scenario_package['preference_feedback'] = feedback
                 st.session_state['feedback_collected'] = True
+                
+                # Save data to Google Sheets
+                save_to_public_google_sheet()
+                
                 st.rerun()
         else:
             # Show closing message after feedback is submitted
@@ -662,6 +734,8 @@ def finaliseScenario():
             st.markdown("## Thank you for participating!")
             st.markdown("### Please return to Prolific to complete the study.")
             st.markdown("*This chat session is now complete.*")
+
+
 
 def stateAgent(): 
     """ Main flow function of the whole interaction -- keeps track of the system state and calls the appropriate procedure on each streamlit refresh. 
