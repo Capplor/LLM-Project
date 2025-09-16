@@ -14,6 +14,8 @@ from langsmith.run_helpers import get_current_run_tree
 from streamlit_feedback import streamlit_feedback
 from streamlit_gsheets import GSheetsConnection
 from functools import partial
+import gspread
+from google.oauth2.service_account import Credentials
 
 import os
 import sys
@@ -164,53 +166,67 @@ def getData (testing = False ):
  
         
         #st.text(st.write(response))
-def save_to_public_google_sheet():
-    """Append scenario package data to Sheet1."""
-    if 'scenario_package' not in st.session_state:
-        st.warning("No scenario package to save")
-        return
-
-    package = st.session_state.scenario_package
-
-    # Prepare row as DataFrame
-    new_row = pd.DataFrame([{
-        "participant_number": package['answer set'].get('participant_number', ''),
-        "q1": package['answer set'].get('q1', ''),
-        "q2": package['answer set'].get('q2', ''),
-        "q3": package['answer set'].get('q3', ''),
-        "q4": package['answer set'].get('q4', ''),
-        "q5": package['answer set'].get('q5', ''),
-        "q6": package['answer set'].get('q6', ''),
-        "q7": package['answer set'].get('q7', ''),
-        "scenario_1": package['scenarios_all'].get('col1', ''),
-        "scenario_2": package['scenarios_all'].get('col2', ''),
-        "scenario_3": package['scenarios_all'].get('col3', ''),
-        "final_scenario": package.get('scenario', ''),
-        "preference_feedback": package.get('preference_feedback', '')
-    }])
-
+def save_to_google_sheets(package, worksheet_name="Sheet1"):
+    """
+    Save the scenario package to a Google Sheet using a Service Account.
+    Creates the worksheet if it doesn't exist and adds headers if necessary.
+    """
     try:
-        # Read existing data from Sheet1
+        gsheets_secrets = st.secrets["connections"]["gsheets"]
+        spreadsheet_url = gsheets_secrets["spreadsheet"]
+
+        credentials_dict = {
+            "type": gsheets_secrets["type"],
+            "project_id": gsheets_secrets["project_id"],
+            "private_key_id": gsheets_secrets["private_key_id"],
+            "private_key": gsheets_secrets["private_key"].replace("\\n", "\n"),
+            "client_email": gsheets_secrets["client_email"],
+            "client_id": gsheets_secrets["client_id"],
+            "auth_uri": gsheets_secrets["auth_uri"],
+            "token_uri": gsheets_secrets["token_uri"],
+            "auth_provider_x509_cert_url": gsheets_secrets["auth_provider_x509_cert_url"],
+            "client_x509_cert_url": gsheets_secrets["client_x509_cert_url"],
+        }
+
+        scopes = [
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive"
+        ]
+
+        credentials = Credentials.from_service_account_info(credentials_dict, scopes=scopes)
+        gc = gspread.authorize(credentials)
+        sh = gc.open_by_url(spreadsheet_url)
+
+        # Get or create worksheet
         try:
-            df_existing = conn.read(
-                worksheet="Sheet1",
-                spreadsheet=spreadsheet_url
-            )
-        except Exception:
-            df_existing = pd.DataFrame()
+            worksheet = sh.worksheet(worksheet_name)
+        except gspread.exceptions.WorksheetNotFound:
+            worksheet = sh.add_worksheet(title=worksheet_name, rows=100, cols=20)
 
-        # Append new row
-        df_updated = pd.concat([df_existing, new_row], ignore_index=True)
+        # Define headers
+        headers = [
+            "participant_number",
+            "final_scenario",
+            "answer_set",
+            "chat_history",
+            "feedback"
+        ]
 
-        # Update Sheet1
-        conn.update(
-            worksheet="Sheet1",
-            data=df_updated,
-            spreadsheet=spreadsheet_url
-        )
+        existing = worksheet.get_all_values()
+        if not existing or existing[0] != headers:
+            worksheet.insert_row(headers, 1)
 
-        st.success("Feedback submitted and saved!")
-        st.session_state['feedback_collected'] = True
+        # Prepare row
+        row = [
+            package.get("participant_number", ""),
+            package.get("scenario", ""),
+            str(package.get("answer_set", "")),
+            str(package.get("chat_history", "")),
+            package.get("preference_feedback", "")
+        ]
+
+        worksheet.append_row(row)
+        st.success("Data saved successfully to Google Sheets!")
     except Exception as e:
         st.error(f"Failed to save data to Google Sheet: {e}")
 
@@ -639,69 +655,49 @@ def updateFinalScenario (new_scenario):
 
 
 @traceable
+@st.cache_data
 def finaliseScenario():
-    """Handles scenario adaptation, feedback, and saving to Google Sheet."""
-    package = st.session_state['scenario_package']
+    """
+    Handles final scenario display, optional adaptation by the user, feedback collection,
+    and saving the session to Google Sheets.
+    """
+    package = st.session_state.get("scenario_package", {})
+    if not package:
+        st.warning("No scenario package found!")
+        return
 
-    if package['judgment'] == "Ready as is!":
-        st.markdown(":tada: Yay! :tada:")
-        st.markdown("You've completed the interaction and found a scenario you liked!")
-        st.markdown(f":green[{package['scenario']}]")
-    else:
-        original = st.container()
-        with original:
-            st.markdown(f"It seems you selected a scenario you liked: \n\n :green[{package['scenario']}]")
-            st.markdown(f"...but you also think it: :red[{package['judgment']}]")
+    # Display final scenario
+    st.markdown("### Your final scenario")
+    st.markdown(f":green[{package.get('scenario', 'No scenario found')}]")
 
-        adapt_convo_container = st.container()
-        with adapt_convo_container:
-            st.chat_message("ai").write("Okay, what's missing or could change to make this better?")
-            
-            if prompt:
-                st.chat_message("human").write(prompt)
-
-                # LLM adaptation chain
-                adaptation_prompt = PromptTemplate(
-                    input_variables=["input", "scenario"],
-                    template=llm_prompts.extraction_adaptation_prompt_template
-                )
-                json_parser = SimpleJsonOutputParser()
-                chain = adaptation_prompt | chat | json_parser
-
-                with st.spinner('Working on your updated scenario 🧐'):
-                    new_response = chain.invoke({
-                        'scenario': package['scenario'], 
-                        'input': prompt
-                    })
-
-                st.markdown(f"Here is the adapted response: \n :orange[{new_response['new_scenario']}]\n\n **What do you think?**")
-
-                c1, c2 = st.columns(2)
-                c1.button("All good!", on_click=updateFinalScenario, args=(new_response['new_scenario'],))
-                c2.button("Keep adapting")
+    # Allow adaptation if not 'Ready as is!'
+    if package.get("judgment") != "Ready as is!":
+        user_input = st.text_area("Adapt your scenario (what would you like to change?):")
+        if st.button("Update scenario"):
+            if user_input.strip():
+                package["scenario"] = user_input
+                package["judgment"] = "Ready as is!"
+                st.session_state["scenario_package"] = package
+                st.success("Scenario updated!")
 
     # Collect final feedback
-    if package['judgment'] == "Ready as is!" or 'feedback_collected' not in st.session_state:
-        st.markdown("---")
-        st.markdown("### Final Feedback")
+    if "feedback_collected" not in st.session_state:
+        feedback = st.text_area(
+            "Why did you like this scenario over others?",
+            placeholder="Please share your thoughts..."
+        )
+        if st.button("Submit Feedback"):
+            package["preference_feedback"] = feedback
+            st.session_state["scenario_package"] = package
+            st.session_state["feedback_collected"] = True
+            # Save to Google Sheets
+            save_to_google_sheets(package)
 
-        with st.form(key="final_feedback_form"):
-            feedback = st.text_area(
-                "Why did you like this scenario over others?",
-                placeholder="Please share your thoughts on why you preferred this scenario..."
-            )
-            submitted = st.form_submit_button("Submit Feedback")
+    else:
+        st.markdown("### Thank you for participating!")
+        st.markdown("Your session has been completed and saved.")
 
-            if submitted:
-                st.session_state.scenario_package['preference_feedback'] = feedback
-                save_to_public_google_sheet()
 
-    # Show thank you after feedback submission
-    if 'feedback_collected' in st.session_state and st.session_state['feedback_collected']:
-        st.markdown("---")
-        st.markdown("## Thank you for participating!")
-        st.markdown("### Please return to Prolific to complete the study.")
-        st.markdown("*This chat session is now complete.*")
 
 def stateAgent(): 
     """ Main flow function of the whole interaction -- keeps track of the system state and calls the appropriate procedure on each streamlit refresh. 
