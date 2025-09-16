@@ -713,11 +713,11 @@ def finaliseScenario():
     # Add the feedback section at the same level as the main if-else block
     if package['judgment'] == "Ready as is!" or 'feedback_collected' in st.session_state:
              if 'feedback_collected' not in st.session_state:
-            st.markdown("---")
-            st.markdown("### Final Feedback")
-            feedback = st.text_area(
-                "Why did you like this scenario over others?",
-                placeholder="Please share your thoughts on why you preferred this scenario..."
+                st.markdown("---")
+                st.markdown("### Final Feedback")
+                feedback = st.text_area(
+                    "Why did you like this scenario over others?",
+                    placeholder="Please share your thoughts on why you preferred this scenario..."
             )
              if st.button("Submit Feedback"):
                 # Store the feedback
