@@ -172,9 +172,11 @@ def save_to_google_sheets(package, worksheet_name="Sheet1"):
     Creates the worksheet if it doesn't exist and adds headers if necessary.
     """
     try:
+        # Get secrets
         gsheets_secrets = st.secrets["connections"]["gsheets"]
         spreadsheet_url = gsheets_secrets["spreadsheet"]
 
+        # Build credentials
         credentials_dict = {
             "type": gsheets_secrets["type"],
             "project_id": gsheets_secrets["project_id"],
@@ -192,7 +194,6 @@ def save_to_google_sheets(package, worksheet_name="Sheet1"):
             "https://www.googleapis.com/auth/spreadsheets",
             "https://www.googleapis.com/auth/drive"
         ]
-
         credentials = Credentials.from_service_account_info(credentials_dict, scopes=scopes)
         gc = gspread.authorize(credentials)
         sh = gc.open_by_url(spreadsheet_url)
@@ -203,33 +204,34 @@ def save_to_google_sheets(package, worksheet_name="Sheet1"):
         except gspread.exceptions.WorksheetNotFound:
             worksheet = sh.add_worksheet(title=worksheet_name, rows=100, cols=20)
 
-        # Define headers
-        headers = [
-            "participant_number",
-            "final_scenario",
-            "answer_set",
-            "chat_history",
-            "feedback"
-        ]
+        # Prepare row as DataFrame
+        new_row = pd.DataFrame([{
+            "participant_number": package['answer set'].get('participant_number', ''),
+            "q1": package['answer set'].get('q1', ''),
+            "q2": package['answer set'].get('q2', ''),
+            "q3": package['answer set'].get('q3', ''),
+            "q4": package['answer set'].get('q4', ''),
+            "q5": package['answer set'].get('q5', ''),
+            "q6": package['answer set'].get('q6', ''),
+            "q7": package['answer set'].get('q7', ''),
+            "scenario_1": package['scenarios_all'].get('col1', ''),
+            "scenario_2": package['scenarios_all'].get('col2', ''),
+            "scenario_3": package['scenarios_all'].get('col3', ''),
+            "final_scenario": package.get('scenario', ''),
+            "preference_feedback": package.get('preference_feedback', '')
+        }])
 
+        # Add headers if missing
         existing = worksheet.get_all_values()
-        if not existing or existing[0] != headers:
-            worksheet.insert_row(headers, 1)
+        if not existing:
+            worksheet.insert_row(list(new_row.columns), 1)
 
-        # Prepare row
-        row = [
-            package.get("participant_number", ""),
-            package.get("scenario", ""),
-            str(package.get("answer_set", "")),
-            str(package.get("chat_history", "")),
-            package.get("preference_feedback", "")
-        ]
-
-        worksheet.append_row(row)
+        # Append row
+        worksheet.append_row(new_row.iloc[0].tolist())
         st.success("Data saved successfully to Google Sheets!")
+
     except Exception as e:
         st.error(f"Failed to save data to Google Sheet: {e}")
-
 
 
 
@@ -701,6 +703,9 @@ def finaliseScenario():
         st.session_state['feedback_collected'] = True
 
         # Refresh Streamlit to show final message
+        if st.button("Submit Feedback"):
+        save_to_google_sheets(package)
+        st.success("Feedback submitted!")
         st.experimental_rerun()
 
     # After submission, show thank you message
@@ -712,28 +717,44 @@ def finaliseScenario():
 
 
 def stateAgent(): 
-    """ Main flow function of the whole interaction -- keeps track of the system state and calls the appropriate procedure on each streamlit refresh. 
     """
-
-    # testing will ensure using dummy data (rather than user-data collection) to simplify development / testing of later parts of the flow. 
+    Main flow function of the interaction.
+    Keeps track of the system state and calls the appropriate procedure on each Streamlit refresh.
+    """
     testing = False
 
-    # keep track of where we are, if testing
     if testing:
         print("Running stateAgent loop -- session state: ", st.session_state['agentState'])
 
+    # Build package from session_state
+    package = {
+        "answer set": {
+            "participant_number": st.session_state.get("participant_number", ""),
+            "q1": st.session_state.get("q1", ""),
+            "q2": st.session_state.get("q2", ""),
+            "q3": st.session_state.get("q3", ""),
+            "q4": st.session_state.get("q4", ""),
+            "q5": st.session_state.get("q5", ""),
+            "q6": st.session_state.get("q6", ""),
+            "q7": st.session_state.get("q7", "")
+        },
+        "scenarios_all": {
+            "col1": st.session_state.get("scenario_1", ""),
+            "col2": st.session_state.get("scenario_2", ""),
+            "col3": st.session_state.get("scenario_3", "")
+        },
+        "scenario": st.session_state.get("final_scenario", "")
+    }
 
-    # Main loop -- selecting the right 'agent' each time: 
+    # Main loop -- selecting the right 'agent' each time
     if st.session_state['agentState'] == 'start':
-            getData(testing)
-            # summariseData(testing)
-            # reviewData(testing)
+        getData(testing)
     elif st.session_state['agentState'] == 'summarise':
-            summariseData(testing)
+        summariseData(testing)
     elif st.session_state['agentState'] == 'review':
-            reviewData(testing)
+        reviewData(testing)
     elif st.session_state['agentState'] == 'finalise':
-            finaliseScenario()
+        finaliseScenario(package)
 
 
 
