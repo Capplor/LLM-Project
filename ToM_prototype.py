@@ -658,39 +658,38 @@ def updateFinalScenario (new_scenario):
 
 def finaliseScenario(package):
     """
-    Collects the participant's answers, final scenario, and preference feedback.
-    Saves everything to Google Sheets and avoids Streamlit duplicate widget errors.
+    Collects answers, final scenario, and feedback.
+    Safely handles missing keys and saves everything to Google Sheets.
     """
-
     st.header("Review and Submit Your Feedback")
     
-    # Display the final scenario for review
+    # Show final scenario
     st.subheader("Final Scenario")
     st.write(package.get("scenario", "No scenario generated yet."))
     
-    # Safely get answers dictionary
-    answers = package.get("answer set", {})  # <-- fallback to empty dict
-    
+    # Safely access answers
+    answers = package.get("answer set", {}) or {}
+
     st.subheader("Your Answers")
     if answers:
-        for i, (q_key, ans) in enumerate(answers.items(), start=1):
-            st.write(f"**Q{i}: {ans}**")
+        for i in range(1, 9):  # Q1 to Q8
+            st.write(f"**Q{i}: {answers.get(f'q{i}', '')}**")
     else:
         st.info("No answers collected yet.")
     
-    # Text area for feedback
-    preference_feedback = st.text_area(
+    # Feedback input
+    feedback_text = st.text_area(
         "Please share your preference or feedback on this scenario:", 
         key="feedback_text_area"
     )
     
-    # Wrap in a form to avoid duplicate buttons
+    # Use a form to avoid duplicate button IDs
     with st.form(key="feedback_form"):
         submit_btn = st.form_submit_button("Submit Feedback")
         
         if submit_btn:
             # Update package with feedback
-            package["preference_feedback"] = preference_feedback
+            package["preference_feedback"] = feedback_text
             
             # Prepare row as DataFrame
             new_row = pd.DataFrame([{
@@ -702,18 +701,24 @@ def finaliseScenario(package):
                 "q5": answers.get("q5", ""),
                 "q6": answers.get("q6", ""),
                 "q7": answers.get("q7", ""),
+                "q8": answers.get("q8", ""),
                 "scenario_1": package.get("scenarios_all", {}).get("col1", ""),
                 "scenario_2": package.get("scenarios_all", {}).get("col2", ""),
                 "scenario_3": package.get("scenarios_all", {}).get("col3", ""),
                 "final_scenario": package.get("scenario", ""),
-                "preference_feedback": preference_feedback
+                "preference_feedback": feedback_text
             }])
             
             # Save to Google Sheets
-            save_to_google_sheets(new_row)  # <-- ensure this function accepts a DataFrame
-            
-            st.success("Thank you! Your feedback has been submitted.")
-            st.experimental_rerun()
+            try:
+                save_to_google_sheets(new_row)  # make sure this function accepts a DataFrame
+                st.success("Thank you! Your feedback has been submitted.")
+                
+                # Only rerun after successful save
+                st.experimental_rerun()
+            except Exception as e:
+                st.error(f"Failed to save data to Google Sheet: {e}")
+
 
 
 def stateAgent(): 
