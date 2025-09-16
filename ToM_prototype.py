@@ -10,8 +10,7 @@ from langsmith import Client
 from langsmith import traceable
 from langsmith.run_helpers import get_current_run_tree
 from streamlit_feedback import streamlit_feedback
-import gspread
-from google.oauth2.service_account import Credentials        
+from streamlit_gsheets import GSheetsConnection
 from functools import partial
 
 import os
@@ -20,6 +19,7 @@ import sys
 from llm_config import LLMConfig
 
 import streamlit as st
+
 
 # Using streamlit secrets to set environment variables for langsmith/chain
 os.environ["OPENAI_API_KEY"] = st.secrets['OPENAI_API_KEY']
@@ -826,6 +826,5 @@ else:
         st.markdown(llm_prompts.intro_and_consent)
         st.button("I accept", key = "consent_button", on_click=markConsent)
            
-
 
 
