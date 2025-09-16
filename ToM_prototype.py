@@ -72,7 +72,12 @@ if 'llm_model' not in st.session_state:
 # Set up memory for the lanchchain conversation bot
 msgs = StreamlitChatMessageHistory(key="langchain_messages")
 memory = ConversationBufferMemory(memory_key="history", chat_memory=msgs)
-conn = st.connection("gsheets", type=GSheetsConnection)
+conn = st.connection(
+    "gsheets", 
+    type=GSheetsConnection, 
+    spreadsheet=st.secrets['SPREADSHEET_URL']  # or st.secrets["SPREADSHEET_URL"]
+)
+
 
 
 # selections = st.sidebar
