@@ -18,7 +18,6 @@ import sys
 from llm_config import LLMConfig
 
 import streamlit as st
-from streamlit_gsheets import GSheetsConnection
 
 # Using streamlit secrets to set environment variables for langsmith/chain
 os.environ["OPENAI_API_KEY"] = st.secrets['OPENAI_API_KEY']
