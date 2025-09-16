@@ -1,5 +1,7 @@
 
 
+
+
 from langchain_community.chat_message_histories import StreamlitChatMessageHistory
 from langchain.memory import ConversationBufferMemory
 from langchain_core.prompts import PromptTemplate
@@ -19,8 +21,7 @@ import sys
 from llm_config import LLMConfig
 
 import streamlit as st
-import pandas as pd
-import gspread
+
 
 # Using streamlit secrets to set environment variables for langsmith/chain
 os.environ["OPENAI_API_KEY"] = st.secrets['OPENAI_API_KEY']
@@ -160,14 +161,15 @@ def getData (testing = False ):
         
         #st.text(st.write(response))
 def save_to_public_google_sheet():
-    """Save data to Google Sheet via Streamlit connection."""
+    """Save scenario package data to a Google Sheet via Streamlit GSheets connection."""
+    
     if 'scenario_package' not in st.session_state:
         st.warning("No scenario package to save")
         return
 
     package = st.session_state.scenario_package
-    
-    # Prepare the data row
+
+    # Prepare the row to append
     row = [
         package['answer set'].get('participant_number', ''),
         package['answer set'].get('q1', ''),
@@ -177,30 +179,20 @@ def save_to_public_google_sheet():
         package['answer set'].get('q5', ''),
         package['answer set'].get('q6', ''),
         package['answer set'].get('q7', ''),
-        package['scenarios_all']['col1'],
-        package['scenarios_all']['col2'],
-        package['scenarios_all']['col3'],
-        package['scenario'],
+        package['scenarios_all'].get('col1', ''),
+        package['scenarios_all'].get('col2', ''),
+        package['scenarios_all'].get('col3', ''),
+        package.get('scenario', ''),
         package.get('preference_feedback', '')
     ]
 
-    # Create a DataFrame with the new row
-    new_data = pd.DataFrame([row], columns=[
-        'participant_number', 'q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'q7',
-        'col1', 'col2', 'col3', 'scenario', 'preference_feedback'
-    ])
-
+    # Append the row using the official GSheets API
     try:
-        # Try to read existing data to check if worksheet exists
-        existing_data = conn.read(worksheet="Form Responses 1")
-        # Append new row
-        updated_data = pd.concat([existing_data, new_data], ignore_index=True)
-        conn.update(worksheet="Form Responses 1", data=updated_data)
-    except:
-        # If worksheet doesn't exist, create it with the new data
-        conn.update(worksheet="Form Responses 1", data=new_data)
+        conn.write(worksheet="Form Responses 1", data=[row], append=True)
+        st.success("Data saved successfully!")
+    except Exception as e:
+        st.error(f"Failed to save data to Google Sheet: {e}")
 
-    st.success("Data saved successfully!")
 
 
 
@@ -625,91 +617,81 @@ def updateFinalScenario (new_scenario):
     st.session_state.scenario_package['judgment'] = "Ready as is!"
 
 @traceable
+@traceable
 def finaliseScenario():
-    """ Procedure governs the last part of the flow, which is the scenario adaptation.
-    """
-
-    # grab a 'local' copy of the package collected in the previous flow
+    """Handles the final part of the flow: scenario adaptation, feedback, and saving to Google Sheet."""
+    
     package = st.session_state['scenario_package']
 
-    # if scenario is judged as 'ready' by the user -- we're done
+    # Show the final scenario if judged as ready
     if package['judgment'] == "Ready as is!":
         st.markdown(":tada: Yay! :tada:")
-        st.markdown("You've now completed the interaction and hopefully found a scenario that you liked! ")
+        st.markdown("You've now completed the interaction and hopefully found a scenario that you liked!")
         st.markdown(f":green[{package['scenario']}]")
     
-    
-    # if the user still wants to continue adapting
+    # If scenario still needs adaptation
     else:
-        # set up a streamlit container for the original scenario
         original = st.container()
-        
         with original:
-            st.markdown(f"It seems that you selected a scenario that you liked: \n\n :green[{package['scenario']}]")
-            st.markdown(f"... but that you also think it: :red[{package['judgment']}]")
+            st.markdown(f"It seems you selected a scenario you liked: \n\n :green[{package['scenario']}]")
+            st.markdown(f"...but you also think it: :red[{package['judgment']}]")
 
-
-        # set up a streamlit container for the new conversation & adapted scenario
         adapt_convo_container = st.container()
-        
         with adapt_convo_container:
             st.chat_message("ai").write("Okay, what's missing or could change to make this better?")
-        
-            # once user enters something 
+            
             if prompt:
-                st.chat_message("human").write(prompt) 
+                st.chat_message("human").write(prompt)
 
-                # use a new chain, drawing on the prompt_adaptation template from lc_prompts.py
-                adaptation_prompt = PromptTemplate(input_variables=["input", "scenario"], template = llm_prompts.extraction_adaptation_prompt_template)
+                # LLM chain for adaptation
+                adaptation_prompt = PromptTemplate(
+                    input_variables=["input", "scenario"],
+                    template=llm_prompts.extraction_adaptation_prompt_template
+                )
                 json_parser = SimpleJsonOutputParser()
-
                 chain = adaptation_prompt | chat | json_parser
 
-                # set up a UX feedback in case the scenario takes longer to generate
-                # note -- spinner disappears once the code inside finishes
                 with st.spinner('Working on your updated scenario 🧐'):
                     new_response = chain.invoke({
                         'scenario': package['scenario'], 
                         'input': prompt
-                        })
-                    # st.write(new_response)
+                    })
 
-                st.markdown(f"Here is the adapted response: \n :orange[{new_response['new_scenario']}]\n\n **what do you think?**")
+                st.markdown(f"Here is the adapted response: \n :orange[{new_response['new_scenario']}]\n\n **What do you think?**")
 
-              
-                c1, c2  = st.columns(2)
-
+                c1, c2 = st.columns(2)
                 c1.button("All good!", 
                           on_click=updateFinalScenario,
                           args=(new_response['new_scenario'],))
-
-                # clicking the "keep adapting" button will force streamlit to refresh the page 
-                # --> this loop will run again.  
                 c2.button("Keep adapting")
-                # Add the feedback section at the same level as the main if-else block
-    if package['judgment'] == "Ready as is!" or 'feedback_collected' in st.session_state:
-        if 'feedback_collected' not in st.session_state:
-            st.markdown("---")
-            st.markdown("### Final Feedback")
+
+    # Collect final preference feedback using a form (atomic submission)
+    if package['judgment'] == "Ready as is!" or 'feedback_collected' not in st.session_state:
+        st.markdown("---")
+        st.markdown("### Final Feedback")
+
+        with st.form(key="final_feedback_form"):
             feedback = st.text_area(
                 "Why did you like this scenario over others?",
                 placeholder="Please share your thoughts on why you preferred this scenario..."
-                )
-            if st.button("Submit Feedback"):
-                 # Store the feedback
-                st.session_state.scenario_package['preference_feedback'] = feedback
-                # Save to Google Sheet 
-            save_to_public_google_sheet()
-            
-            st.session_state['feedback_collected'] = True
-            st.rerun()
-        else:
-            # Show closing message after feedback is submitted
-            st.markdown("---")
-            st.markdown("## Thank you for participating!")
-            st.markdown("### Please return to Prolific to complete the study.")
-            st.markdown("*This chat session is now complete.*")
+            )
+            submitted = st.form_submit_button("Submit Feedback")
 
+            if submitted:
+                st.session_state.scenario_package['preference_feedback'] = feedback
+                try:
+                    save_to_public_google_sheet()
+                    st.success("Feedback submitted and saved!")
+                    st.session_state['feedback_collected'] = True
+                except Exception as e:
+                    st.error(f"Error saving feedback: {e}")
+
+    # Thank you message after feedback is submitted
+    if 'feedback_collected' in st.session_state and st.session_state['feedback_collected']:
+        st.markdown("---")
+        st.markdown("## Thank you for participating!")
+        st.markdown("### Please return to Prolific to complete the study.")
+        st.markdown("*This chat session is now complete.*")
 
 
 
@@ -805,5 +787,6 @@ else:
         st.markdown(llm_prompts.intro_and_consent)
         st.button("I accept", key = "consent_button", on_click=markConsent)
            
+
 
 
