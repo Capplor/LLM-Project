@@ -21,6 +21,7 @@ import sys
 from llm_config import LLMConfig
 
 import streamlit as st
+import panda as pd
 
 
 # Using streamlit secrets to set environment variables for langsmith/chain
@@ -161,34 +162,39 @@ def getData (testing = False ):
         
         #st.text(st.write(response))
 def save_to_public_google_sheet():
-    """Save scenario package data to a Google Sheet via Streamlit GSheets connection."""
-    
     if 'scenario_package' not in st.session_state:
         st.warning("No scenario package to save")
         return
 
     package = st.session_state.scenario_package
 
-    # Prepare the row to append
-    row = [
-        package['answer set'].get('participant_number', ''),
-        package['answer set'].get('q1', ''),
-        package['answer set'].get('q2', ''),
-        package['answer set'].get('q3', ''),
-        package['answer set'].get('q4', ''),
-        package['answer set'].get('q5', ''),
-        package['answer set'].get('q6', ''),
-        package['answer set'].get('q7', ''),
-        package['scenarios_all'].get('col1', ''),
-        package['scenarios_all'].get('col2', ''),
-        package['scenarios_all'].get('col3', ''),
-        package.get('scenario', ''),
-        package.get('preference_feedback', '')
-    ]
+    # Prepare the row as a DataFrame
+    new_row = pd.DataFrame([{
+        "participant_number": package['answer set'].get('participant_number', ''),
+        "q1": package['answer set'].get('q1', ''),
+        "q2": package['answer set'].get('q2', ''),
+        "q3": package['answer set'].get('q3', ''),
+        "q4": package['answer set'].get('q4', ''),
+        "q5": package['answer set'].get('q5', ''),
+        "q6": package['answer set'].get('q6', ''),
+        "q7": package['answer set'].get('q7', ''),
+        "scenario_1": package['scenarios_all'].get('col1', ''),
+        "scenario_2": package['scenarios_all'].get('col2', ''),
+        "scenario_3": package['scenarios_all'].get('col3', ''),
+        "final_scenario": package.get('scenario', ''),
+        "preference_feedback": package.get('preference_feedback', '')
+    }])
 
-    # Append the row using the official GSheets API
     try:
-        conn.write(worksheet="Form Responses 1", data=[row], append=True)
+        # Read existing worksheet
+        df_existing = conn.read(worksheet="Form Responses 1")
+
+        # Append the new row
+        df_updated = pd.concat([df_existing, new_row], ignore_index=True)
+
+        # Update the worksheet
+        conn.update(worksheet="Form Responses 1", data=df_updated)
+
         st.success("Data saved successfully!")
     except Exception as e:
         st.error(f"Failed to save data to Google Sheet: {e}")
@@ -616,7 +622,7 @@ def updateFinalScenario (new_scenario):
     st.session_state.scenario_package['scenario'] = new_scenario
     st.session_state.scenario_package['judgment'] = "Ready as is!"
 
-@traceable
+
 @traceable
 def finaliseScenario():
     """Handles the final part of the flow: scenario adaptation, feedback, and saving to Google Sheet."""
@@ -665,7 +671,7 @@ def finaliseScenario():
                           args=(new_response['new_scenario'],))
                 c2.button("Keep adapting")
 
-    # Collect final preference feedback using a form (atomic submission)
+    # Collect final preference feedback using a form
     if package['judgment'] == "Ready as is!" or 'feedback_collected' not in st.session_state:
         st.markdown("---")
         st.markdown("### Final Feedback")
@@ -679,12 +685,38 @@ def finaliseScenario():
 
             if submitted:
                 st.session_state.scenario_package['preference_feedback'] = feedback
+
+                # Save to Google Sheet using official GSheets API
                 try:
-                    save_to_public_google_sheet()
+                    import pandas as pd
+                    new_row = pd.DataFrame([{
+                        "participant_number": package['answer set'].get('participant_number', ''),
+                        "q1": package['answer set'].get('q1', ''),
+                        "q2": package['answer set'].get('q2', ''),
+                        "q3": package['answer set'].get('q3', ''),
+                        "q4": package['answer set'].get('q4', ''),
+                        "q5": package['answer set'].get('q5', ''),
+                        "q6": package['answer set'].get('q6', ''),
+                        "q7": package['answer set'].get('q7', ''),
+                        "scenario_1": package['scenarios_all'].get('col1', ''),
+                        "scenario_2": package['scenarios_all'].get('col2', ''),
+                        "scenario_3": package['scenarios_all'].get('col3', ''),
+                        "final_scenario": package.get('scenario', ''),
+                        "preference_feedback": package.get('preference_feedback', '')
+                    }])
+
+                    # Read existing worksheet
+                    df_existing = conn.read(worksheet="Form Responses 1")
+
+                    # Append new row and update sheet
+                    df_updated = pd.concat([df_existing, new_row], ignore_index=True)
+                    conn.update(worksheet="Form Responses 1", data=df_updated)
+
                     st.success("Feedback submitted and saved!")
                     st.session_state['feedback_collected'] = True
+
                 except Exception as e:
-                    st.error(f"Error saving feedback: {e}")
+                    st.error(f"Failed to save data to Google Sheet: {e}")
 
     # Thank you message after feedback is submitted
     if 'feedback_collected' in st.session_state and st.session_state['feedback_collected']:
@@ -692,7 +724,6 @@ def finaliseScenario():
         st.markdown("## Thank you for participating!")
         st.markdown("### Please return to Prolific to complete the study.")
         st.markdown("*This chat session is now complete.*")
-
 
 
 def stateAgent(): 
