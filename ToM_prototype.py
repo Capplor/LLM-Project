@@ -656,7 +656,7 @@ def updateFinalScenario (new_scenario):
     st.session_state.scenario_package['judgment'] = "Ready as is!"
 
 
-def finaliseScenario():
+def finaliseScenario(package):
     """
     Final stage of the flow:
     - Displays the selected scenario
