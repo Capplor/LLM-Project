@@ -159,15 +159,15 @@ def getData (testing = False ):
         
         #st.text(st.write(response))
 def save_to_public_google_sheet():
-    """Save data to Google Sheet via Streamlit connection."""
+    """Save scenario package data to a Google Sheet via Streamlit GSheets connection."""
+    
     if 'scenario_package' not in st.session_state:
         st.warning("No scenario package to save")
         return
 
     package = st.session_state.scenario_package
-    sheet = conn.get_worksheet_by_name("Form Responses 1") or conn.add_worksheet("Form Responses 1", 100, 13)
-    
-    # prepare row
+
+    # Prepare the row to append
     row = [
         package['answer set'].get('participant_number', ''),
         package['answer set'].get('q1', ''),
@@ -177,15 +177,20 @@ def save_to_public_google_sheet():
         package['answer set'].get('q5', ''),
         package['answer set'].get('q6', ''),
         package['answer set'].get('q7', ''),
-        package['scenarios_all']['col1'],
-        package['scenarios_all']['col2'],
-        package['scenarios_all']['col3'],
-        package['scenario'],
+        package['scenarios_all'].get('col1', ''),
+        package['scenarios_all'].get('col2', ''),
+        package['scenarios_all'].get('col3', ''),
+        package.get('scenario', ''),
         package.get('preference_feedback', '')
     ]
-    
-    sheet.append_row(row)
-    st.success("Data saved successfully!")
+
+    # Append the row using the official GSheets API
+    try:
+        conn.write(worksheet="Form Responses 1", data=[row], append=True)
+        st.success("Data saved successfully!")
+    except Exception as e:
+        st.error(f"Failed to save data to Google Sheet: {e}")
+
 
 
 
