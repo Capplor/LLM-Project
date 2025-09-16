@@ -10,7 +10,6 @@ from langsmith import Client
 from langsmith import traceable
 from langsmith.run_helpers import get_current_run_tree
 from streamlit_feedback import streamlit_feedback
-from streamlit_gsheets import GSheetsConnection
 from functools import partial
 
 import os
@@ -19,7 +18,7 @@ import sys
 from llm_config import LLMConfig
 
 import streamlit as st
-
+from streamlit_gsheets import GSheetsConnection
 
 # Using streamlit secrets to set environment variables for langsmith/chain
 os.environ["OPENAI_API_KEY"] = st.secrets['OPENAI_API_KEY']
