@@ -728,12 +728,12 @@ def finaliseScenario():
                 save_to_public_google_sheet()
                 
                 st.rerun()
-        else:
+            else:
             # Show closing message after feedback is submitted
-            st.markdown("---")
-            st.markdown("## Thank you for participating!")
-            st.markdown("### Please return to Prolific to complete the study.")
-            st.markdown("*This chat session is now complete.*")
+                st.markdown("---")
+                st.markdown("## Thank you for participating!")
+                st.markdown("### Please return to Prolific to complete the study.")
+                st.markdown("*This chat session is now complete.*")
 
 
 
