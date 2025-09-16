@@ -704,11 +704,10 @@ def finaliseScenario():
 
         # Refresh Streamlit to show final message
         if st.button("Submit Feedback"):
-        save_to_google_sheets(package)
-        st.success("Feedback submitted!")
-        st.experimental_rerun()
-
-    # After submission, show thank you message
+            save_to_google_sheets(package)
+            st.success("Feedback submitted!")
+            st.experimental_rerun()
+            # After submission, show thank you message
     if st.session_state.get('feedback_collected', False):
         st.markdown("---")
         st.markdown("## Thank you for participating!")
