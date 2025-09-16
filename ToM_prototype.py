@@ -658,61 +658,58 @@ def updateFinalScenario (new_scenario):
 
 def finaliseScenario(package):
     """
-    Final stage of the flow:
-    - Displays the selected scenario
-    - Allows user to provide feedback
-    - Saves feedback and session data to Google Sheets
+    Collects the participant's answers, final scenario, and preference feedback.
+    Saves everything to Google Sheets and avoids Streamlit duplicate widget errors.
     """
-    package = st.session_state.get('scenario_package', None)
-    if not package:
-        st.warning("No scenario package found. Please complete the previous steps first.")
-        return
-
-    st.markdown("### Your Selected Scenario")
-    st.markdown(f":green[{package['scenario']}]")
     
-    # If the scenario is already marked as ready, just show confirmation
-    if package.get('judgment') == "Ready as is!":
-        st.success("🎉 You've completed the interaction!")
-    else:
-        st.info(f"Current judgment: :red[{package.get('judgment', 'Not set')}]")
-        st.markdown("You can provide input to adapt this scenario if you want to improve it.")
+    st.header("Review and Submit Your Feedback")
     
-    # Feedback section
-    st.markdown("---")
-    st.markdown("### Final Feedback")
-    feedback = st.text_area(
-        "Why did you like this scenario over others?",
-        placeholder="Please share your thoughts..."
+    # Display the final scenario for review
+    st.subheader("Final Scenario")
+    st.write(package.get("scenario", "No scenario generated yet."))
+    
+    # Show participant's answers for review
+    st.subheader("Your Answers")
+    answers = package.get("answer_set", {})
+    for i, (q_key, ans) in enumerate(answers.items(), start=1):
+        st.write(f"**Q{i}: {ans}**")
+    
+    # Text area for preference feedback
+    preference_feedback = st.text_area(
+        "Please share your preference or feedback on this scenario:", 
+        key="feedback_text_area"
     )
-
-    # Submit button outside cached function
-    if st.button("Submit Feedback"):
-        # Add feedback to session package
-        package['preference_feedback'] = feedback
-        package['completion_time'] = datetime.utcnow().isoformat()
-
-        # Save to Google Sheets
-        try:
-            save_to_google_sheets(package)
-            st.success("Feedback submitted and saved to Google Sheets!")
-        except Exception as e:
-            st.error(f"Failed to save data: {e}")
-
-        # Mark feedback as collected
-        st.session_state['feedback_collected'] = True
-
-        # Refresh Streamlit to show final message
-        if st.button("Submit Feedback"):
-            save_to_google_sheets(package)
-            st.success("Feedback submitted!")
+    
+    # Wrap in a form to avoid duplicate buttons
+    with st.form(key="feedback_form"):
+        submit_btn = st.form_submit_button("Submit Feedback")
+        
+        if submit_btn:
+            # Update package with feedback
+            package["preference_feedback"] = preference_feedback
+            
+            # Prepare row as DataFrame to include all Qs + scenarios + feedback
+            new_row = pd.DataFrame([{
+                "participant_number": answers.get("participant_number", ""),
+                "q1": answers.get("q1", ""),
+                "q2": answers.get("q2", ""),
+                "q3": answers.get("q3", ""),
+                "q4": answers.get("q4", ""),
+                "q5": answers.get("q5", ""),
+                "q6": answers.get("q6", ""),
+                "q7": answers.get("q7", ""),
+                "scenario_1": package.get("scenarios_all", {}).get("col1", ""),
+                "scenario_2": package.get("scenarios_all", {}).get("col2", ""),
+                "scenario_3": package.get("scenarios_all", {}).get("col3", ""),
+                "final_scenario": package.get("scenario", ""),
+                "preference_feedback": preference_feedback
+            }])
+            
+            # Save to Google Sheets
+            save_to_google_sheets(new_row)
+            
+            st.success("Thank you! Your feedback has been submitted.")
             st.experimental_rerun()
-            # After submission, show thank you message
-    if st.session_state.get('feedback_collected', False):
-        st.markdown("---")
-        st.markdown("## Thank you for participating!")
-        st.markdown("### Please return to Prolific to complete the study.")
-        st.markdown("*This chat session is now complete.*")
 
 
 def stateAgent(): 
