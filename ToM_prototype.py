@@ -24,7 +24,7 @@ from llm_config import LLMConfig
 
 import streamlit as st
 import pandas as pd
-
+from datetime import datetime
 
 # Using streamlit secrets to set environment variables for langsmith/chain
 os.environ["OPENAI_API_KEY"] = st.secrets['OPENAI_API_KEY']
@@ -654,48 +654,64 @@ def updateFinalScenario (new_scenario):
     st.session_state.scenario_package['judgment'] = "Ready as is!"
 
 
-@st.cache_data
+import streamlit as st
+from datetime import datetime
+
 def finaliseScenario():
     """
-    Handles final scenario display, optional adaptation by the user, feedback collection,
-    and saving the session to Google Sheets.
+    Final stage of the flow:
+    - Displays the selected scenario
+    - Allows user to provide feedback
+    - Saves feedback and session data to Google Sheets
     """
-    package = st.session_state.get("scenario_package", {})
+    package = st.session_state.get('scenario_package', None)
     if not package:
-        st.warning("No scenario package found!")
+        st.warning("No scenario package found. Please complete the previous steps first.")
         return
 
-    # Display final scenario
-    st.markdown("### Your final scenario")
-    st.markdown(f":green[{package.get('scenario', 'No scenario found')}]")
-
-    # Allow adaptation if not 'Ready as is!'
-    if package.get("judgment") != "Ready as is!":
-        user_input = st.text_area("Adapt your scenario (what would you like to change?):")
-        if st.button("Update scenario"):
-            if user_input.strip():
-                package["scenario"] = user_input
-                package["judgment"] = "Ready as is!"
-                st.session_state["scenario_package"] = package
-                st.success("Scenario updated!")
-
-    # Collect final feedback
-    if "feedback_collected" not in st.session_state:
-        feedback = st.text_area(
-            "Why did you like this scenario over others?",
-            placeholder="Please share your thoughts..."
-        )
-        if st.button("Submit Feedback"):
-            package["preference_feedback"] = feedback
-            st.session_state["scenario_package"] = package
-            st.session_state["feedback_collected"] = True
-            # Save to Google Sheets
-            save_to_google_sheets(package)
-
+    st.markdown("### Your Selected Scenario")
+    st.markdown(f":green[{package['scenario']}]")
+    
+    # If the scenario is already marked as ready, just show confirmation
+    if package.get('judgment') == "Ready as is!":
+        st.success("🎉 You've completed the interaction!")
     else:
-        st.markdown("### Thank you for participating!")
-        st.markdown("Your session has been completed and saved.")
+        st.info(f"Current judgment: :red[{package.get('judgment', 'Not set')}]")
+        st.markdown("You can provide input to adapt this scenario if you want to improve it.")
+    
+    # Feedback section
+    st.markdown("---")
+    st.markdown("### Final Feedback")
+    feedback = st.text_area(
+        "Why did you like this scenario over others?",
+        placeholder="Please share your thoughts..."
+    )
 
+    # Submit button outside cached function
+    if st.button("Submit Feedback"):
+        # Add feedback to session package
+        package['preference_feedback'] = feedback
+        package['completion_time'] = datetime.utcnow().isoformat()
+
+        # Save to Google Sheets
+        try:
+            save_session_data_to_google_sheets_streamlit_advanced(package)
+            st.success("Feedback submitted and saved to Google Sheets!")
+        except Exception as e:
+            st.error(f"Failed to save data: {e}")
+
+        # Mark feedback as collected
+        st.session_state['feedback_collected'] = True
+
+        # Refresh Streamlit to show final message
+        st.experimental_rerun()
+
+    # After submission, show thank you message
+    if st.session_state.get('feedback_collected', False):
+        st.markdown("---")
+        st.markdown("## Thank you for participating!")
+        st.markdown("### Please return to Prolific to complete the study.")
+        st.markdown("*This chat session is now complete.*")
 
 
 def stateAgent(): 
