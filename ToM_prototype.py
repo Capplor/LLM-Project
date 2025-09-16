@@ -72,12 +72,14 @@ if 'llm_model' not in st.session_state:
 # Set up memory for the lanchchain conversation bot
 msgs = StreamlitChatMessageHistory(key="langchain_messages")
 memory = ConversationBufferMemory(memory_key="history", chat_memory=msgs)
-conn = st.connection(
-    "gsheets", 
-    type=GSheetsConnection, 
-    spreadsheet=st.secrets['SPREADSHEET_URL']  # or st.secrets["SPREADSHEET_URL"]
-)
+conn = st.connection("gsheets", type=GSheetsConnection)
 
+spreadsheet_url = st.secrets.get("SPREADSHEET_URL")
+if not spreadsheet_url:
+    st.error("No Google Sheet URL provided in secrets!")
+else:
+    # Open the spreadsheet explicitly
+    conn._instance = conn._instance.open_by_url(spreadsheet_url)
 
 
 # selections = st.sidebar
