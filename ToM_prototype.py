@@ -654,7 +654,6 @@ def updateFinalScenario (new_scenario):
     st.session_state.scenario_package['judgment'] = "Ready as is!"
 
 
-@traceable
 @st.cache_data
 def finaliseScenario():
     """
