@@ -5,3 +5,4 @@ langchain_core
 langsmith
 streamlit_feedback
 streamlit
+streamlit_gsheets 
