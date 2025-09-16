@@ -30,11 +30,6 @@ os.environ["LANGCHAIN_API_KEY"] = st.secrets['LANGCHAIN_API_KEY']
 os.environ["LANGCHAIN_PROJECT"] = st.secrets['LANGCHAIN_PROJECT']
 os.environ["LANGCHAIN_TRACING_V2"] = 'true'
 os.environ["SPREADSHEET_URL"] = st.secrets['SPREADSHEET_URL']
-conn = st.connection(
-    "gsheets", 
-    type=GSheetsConnection, 
-    spreadsheet=os.environ.get("SPREADSHEET_URL")  # or st.secrets["SPREADSHEET_URL"]
-)
 
 # Parse input args, checking for config file
 input_args = sys.argv[1:]
@@ -172,7 +167,15 @@ def save_to_public_google_sheet():
 
     package = st.session_state.scenario_package
 
-    # Prepare the row as a DataFrame
+    # Ensure the spreadsheet is set
+    spreadsheet_url = os.environ.get("SPREADSHEET_URL") or st.secrets.get("SPREADSHEET_URL")
+    if not spreadsheet_url:
+        st.error("No Google Sheet URL provided in secrets or environment variables.")
+        return
+
+    conn._instance = conn._instance.open_by_url(spreadsheet_url)
+
+    import pandas as pd
     new_row = pd.DataFrame([{
         "participant_number": package['answer set'].get('participant_number', ''),
         "q1": package['answer set'].get('q1', ''),
@@ -190,16 +193,11 @@ def save_to_public_google_sheet():
     }])
 
     try:
-        # Read existing worksheet
         df_existing = conn.read(worksheet="Form Responses 1")
-
-        # Append the new row
         df_updated = pd.concat([df_existing, new_row], ignore_index=True)
-
-        # Update the worksheet
         conn.update(worksheet="Form Responses 1", data=df_updated)
-
-        st.success("Data saved successfully!")
+        st.success("Feedback submitted and saved!")
+        st.session_state['feedback_collected'] = True
     except Exception as e:
         st.error(f"Failed to save data to Google Sheet: {e}")
 
