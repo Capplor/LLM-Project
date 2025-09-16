@@ -654,9 +654,6 @@ def updateFinalScenario (new_scenario):
     st.session_state.scenario_package['judgment'] = "Ready as is!"
 
 
-import streamlit as st
-from datetime import datetime
-
 def finaliseScenario():
     """
     Final stage of the flow:
@@ -695,7 +692,7 @@ def finaliseScenario():
 
         # Save to Google Sheets
         try:
-            save_session_data_to_google_sheets_streamlit_advanced(package)
+            save_to_google_sheets(package)
             st.success("Feedback submitted and saved to Google Sheets!")
         except Exception as e:
             st.error(f"Failed to save data: {e}")
