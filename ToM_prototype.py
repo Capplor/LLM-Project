@@ -661,20 +661,24 @@ def finaliseScenario(package):
     Collects the participant's answers, final scenario, and preference feedback.
     Saves everything to Google Sheets and avoids Streamlit duplicate widget errors.
     """
-    
+
     st.header("Review and Submit Your Feedback")
     
     # Display the final scenario for review
     st.subheader("Final Scenario")
     st.write(package.get("scenario", "No scenario generated yet."))
     
-    # Show participant's answers for review
-    st.subheader("Your Answers")
-    answers = package.get("answer_set", {})
-    for i, (q_key, ans) in enumerate(answers.items(), start=1):
-        st.write(f"**Q{i}: {ans}**")
+    # Safely get answers dictionary
+    answers = package.get("answer set", {})  # <-- fallback to empty dict
     
-    # Text area for preference feedback
+    st.subheader("Your Answers")
+    if answers:
+        for i, (q_key, ans) in enumerate(answers.items(), start=1):
+            st.write(f"**Q{i}: {ans}**")
+    else:
+        st.info("No answers collected yet.")
+    
+    # Text area for feedback
     preference_feedback = st.text_area(
         "Please share your preference or feedback on this scenario:", 
         key="feedback_text_area"
@@ -688,7 +692,7 @@ def finaliseScenario(package):
             # Update package with feedback
             package["preference_feedback"] = preference_feedback
             
-            # Prepare row as DataFrame to include all Qs + scenarios + feedback
+            # Prepare row as DataFrame
             new_row = pd.DataFrame([{
                 "participant_number": answers.get("participant_number", ""),
                 "q1": answers.get("q1", ""),
@@ -706,7 +710,7 @@ def finaliseScenario(package):
             }])
             
             # Save to Google Sheets
-            save_to_google_sheets(new_row)
+            save_to_google_sheets(new_row)  # <-- ensure this function accepts a DataFrame
             
             st.success("Thank you! Your feedback has been submitted.")
             st.experimental_rerun()
