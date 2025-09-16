@@ -10,6 +10,8 @@ from langsmith import Client
 from langsmith import traceable
 from langsmith.run_helpers import get_current_run_tree
 from streamlit_feedback import streamlit_feedback
+import gspread
+from google.oauth2.service_account import Credentials        
 from functools import partial
 
 import os
