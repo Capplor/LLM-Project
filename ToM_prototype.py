@@ -30,7 +30,11 @@ os.environ["LANGCHAIN_API_KEY"] = st.secrets['LANGCHAIN_API_KEY']
 os.environ["LANGCHAIN_PROJECT"] = st.secrets['LANGCHAIN_PROJECT']
 os.environ["LANGCHAIN_TRACING_V2"] = 'true'
 os.environ["SPREADSHEET_URL"] = st.secrets['SPREADSHEET_URL']
-conn = st.connection("gsheets", type=GSheetsConnection)
+conn = st.connection(
+    "gsheets", 
+    type=GSheetsConnection, 
+    spreadsheet=os.environ.get("SPREADSHEET_URL")  # or st.secrets["SPREADSHEET_URL"]
+)
 
 # Parse input args, checking for config file
 input_args = sys.argv[1:]
