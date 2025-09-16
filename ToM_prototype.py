@@ -712,28 +712,25 @@ def finaliseScenario():
     
     # Add the feedback section at the same level as the main if-else block
     if package['judgment'] == "Ready as is!" or 'feedback_collected' in st.session_state:
-             if 'feedback_collected' not in st.session_state:
-                st.markdown("---")
-                st.markdown("### Final Feedback")
-                feedback = st.text_area(
-                    "Why did you like this scenario over others?",
-                    placeholder="Please share your thoughts on why you preferred this scenario..."
+        if 'feedback_collected' not in st.session_state:
+            st.markdown("---")
+            st.markdown("### Final Feedback")
+            feedback = st.text_area(
+                "Why did you like this scenario over others?",
+                placeholder="Please share your thoughts on why you preferred this scenario..."
             )
-             if st.button("Submit Feedback"):
+            if st.button("Submit Feedback"):
                 # Store the feedback
                 st.session_state.scenario_package['preference_feedback'] = feedback
-                st.session_state['feedback_collected'] = True
-                
-                # Save data to Google Sheets
                 save_to_public_google_sheet()
-                
+                st.session_state['feedback_collected'] = True
                 st.rerun()
-            else:
+        else:
             # Show closing message after feedback is submitted
-                st.markdown("---")
-                st.markdown("## Thank you for participating!")
-                st.markdown("### Please return to Prolific to complete the study.")
-                st.markdown("*This chat session is now complete.*")
+            st.markdown("---")
+            st.markdown("## Thank you for participating!")
+            st.markdown("### Please return to Prolific to complete the study.")
+            st.markdown("*This chat session is now complete.*")
 
 
 
