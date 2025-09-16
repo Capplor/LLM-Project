@@ -633,71 +633,6 @@ def updateFinalScenario (new_scenario):
 
 
 @traceable
-import pandas as pd
-
-# --- Step 1: Ensure GSheets connection is open ---
-conn = st.connection("gsheets", type=GSheetsConnection)
-spreadsheet_url = st.secrets.get("SPREADSHEET_URL")
-if not spreadsheet_url:
-    st.error("No Google Sheet URL provided in secrets!")
-else:
-    # Open the spreadsheet explicitly
-    conn._instance = conn._instance.open_by_url(spreadsheet_url)
-
-
-# --- Step 2: Update the final scenario ---
-def updateFinalScenario(new_scenario):
-    """Updates the final scenario in session state."""
-    st.session_state.scenario_package['scenario'] = new_scenario
-    st.session_state.scenario_package['judgment'] = "Ready as is!"
-
-
-# --- Step 3: Save to Google Sheet ---
-def save_to_public_google_sheet():
-    """Append scenario package data to the Google Sheet."""
-    if 'scenario_package' not in st.session_state:
-        st.warning("No scenario package to save")
-        return
-
-    package = st.session_state.scenario_package
-
-    # Prepare row as a DataFrame
-    new_row = pd.DataFrame([{
-        "participant_number": package['answer set'].get('participant_number', ''),
-        "q1": package['answer set'].get('q1', ''),
-        "q2": package['answer set'].get('q2', ''),
-        "q3": package['answer set'].get('q3', ''),
-        "q4": package['answer set'].get('q4', ''),
-        "q5": package['answer set'].get('q5', ''),
-        "q6": package['answer set'].get('q6', ''),
-        "q7": package['answer set'].get('q7', ''),
-        "scenario_1": package['scenarios_all'].get('col1', ''),
-        "scenario_2": package['scenarios_all'].get('col2', ''),
-        "scenario_3": package['scenarios_all'].get('col3', ''),
-        "final_scenario": package.get('scenario', ''),
-        "preference_feedback": package.get('preference_feedback', '')
-    }])
-
-    try:
-        # Read existing worksheet (if empty, create an empty DataFrame)
-        try:
-            df_existing = conn.read(worksheet="Form Responses 1")
-        except:
-            df_existing = pd.DataFrame()
-
-        # Append new row
-        df_updated = pd.concat([df_existing, new_row], ignore_index=True)
-
-        # Update worksheet
-        conn.update(worksheet="Form Responses 1", data=df_updated)
-        st.success("Feedback submitted and saved!")
-        st.session_state['feedback_collected'] = True
-    except Exception as e:
-        st.error(f"Failed to save data to Google Sheet: {e}")
-
-
-# --- Step 4: Finalise Scenario Flow ---
-@traceable
 def finaliseScenario():
     """Handles scenario adaptation, feedback, and saving to Google Sheet."""
     package = st.session_state['scenario_package']
@@ -764,7 +699,6 @@ def finaliseScenario():
         st.markdown("## Thank you for participating!")
         st.markdown("### Please return to Prolific to complete the study.")
         st.markdown("*This chat session is now complete.*")
-
 
 def stateAgent(): 
     """ Main flow function of the whole interaction -- keeps track of the system state and calls the appropriate procedure on each streamlit refresh. 
