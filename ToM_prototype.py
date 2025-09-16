@@ -73,12 +73,10 @@ if 'llm_model' not in st.session_state:
 msgs = StreamlitChatMessageHistory(key="langchain_messages")
 memory = ConversationBufferMemory(memory_key="history", chat_memory=msgs)
 conn = st.connection("gsheets", type=GSheetsConnection)
-
 spreadsheet_url = st.secrets.get("SPREADSHEET_URL")
 if not spreadsheet_url:
     st.error("No Google Sheet URL provided in secrets!")
-else:
-    conn._instance = conn._instance.open_by_url(spreadsheet_url)
+
 
 
 # selections = st.sidebar
@@ -167,14 +165,14 @@ def getData (testing = False ):
         
         #st.text(st.write(response))
 def save_to_public_google_sheet():
-    """Append scenario package data to the Google Sheet."""
+    """Append scenario package data to Sheet1."""
     if 'scenario_package' not in st.session_state:
         st.warning("No scenario package to save")
         return
 
     package = st.session_state.scenario_package
 
-    # Prepare row as a DataFrame
+    # Prepare row as DataFrame
     new_row = pd.DataFrame([{
         "participant_number": package['answer set'].get('participant_number', ''),
         "q1": package['answer set'].get('q1', ''),
@@ -192,17 +190,25 @@ def save_to_public_google_sheet():
     }])
 
     try:
-        # Read existing worksheet (if empty, create an empty DataFrame)
+        # Read existing data from Sheet1
         try:
-            df_existing = conn.read(worksheet="Form Responses 1")
-        except:
+            df_existing = conn.read(
+                worksheet="Sheet1",
+                spreadsheet=spreadsheet_url
+            )
+        except Exception:
             df_existing = pd.DataFrame()
 
         # Append new row
         df_updated = pd.concat([df_existing, new_row], ignore_index=True)
 
-        # Update worksheet
-        conn.update(worksheet="Form Responses 1", data=df_updated)
+        # Update Sheet1
+        conn.update(
+            worksheet="Sheet1",
+            data=df_updated,
+            spreadsheet=spreadsheet_url
+        )
+
         st.success("Feedback submitted and saved!")
         st.session_state['feedback_collected'] = True
     except Exception as e:
@@ -637,13 +643,10 @@ def finaliseScenario():
     """Handles scenario adaptation, feedback, and saving to Google Sheet."""
     package = st.session_state['scenario_package']
 
-    # Show final scenario if ready
     if package['judgment'] == "Ready as is!":
         st.markdown(":tada: Yay! :tada:")
         st.markdown("You've completed the interaction and found a scenario you liked!")
         st.markdown(f":green[{package['scenario']}]")
-
-    # If scenario needs adaptation
     else:
         original = st.container()
         with original:
@@ -657,7 +660,7 @@ def finaliseScenario():
             if prompt:
                 st.chat_message("human").write(prompt)
 
-                # LLM chain for adaptation
+                # LLM adaptation chain
                 adaptation_prompt = PromptTemplate(
                     input_variables=["input", "scenario"],
                     template=llm_prompts.extraction_adaptation_prompt_template
@@ -677,7 +680,7 @@ def finaliseScenario():
                 c1.button("All good!", on_click=updateFinalScenario, args=(new_response['new_scenario'],))
                 c2.button("Keep adapting")
 
-    # --- Step 5: Collect final preference feedback ---
+    # Collect final feedback
     if package['judgment'] == "Ready as is!" or 'feedback_collected' not in st.session_state:
         st.markdown("---")
         st.markdown("### Final Feedback")
@@ -693,7 +696,7 @@ def finaliseScenario():
                 st.session_state.scenario_package['preference_feedback'] = feedback
                 save_to_public_google_sheet()
 
-    # --- Step 6: Thank you message after feedback submission ---
+    # Show thank you after feedback submission
     if 'feedback_collected' in st.session_state and st.session_state['feedback_collected']:
         st.markdown("---")
         st.markdown("## Thank you for participating!")
