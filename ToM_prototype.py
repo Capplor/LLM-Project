@@ -19,7 +19,8 @@ import sys
 from llm_config import LLMConfig
 
 import streamlit as st
-
+import pandas as pd
+import gspread
 
 # Using streamlit secrets to set environment variables for langsmith/chain
 os.environ["OPENAI_API_KEY"] = st.secrets['OPENAI_API_KEY']
@@ -159,15 +160,14 @@ def getData (testing = False ):
         
         #st.text(st.write(response))
 def save_to_public_google_sheet():
-    """Save scenario package data to a Google Sheet via Streamlit GSheets connection."""
-    
+    """Save data to Google Sheet via Streamlit connection."""
     if 'scenario_package' not in st.session_state:
         st.warning("No scenario package to save")
         return
 
     package = st.session_state.scenario_package
-
-    # Prepare the row to append
+    
+    # Prepare the data row
     row = [
         package['answer set'].get('participant_number', ''),
         package['answer set'].get('q1', ''),
@@ -177,20 +177,30 @@ def save_to_public_google_sheet():
         package['answer set'].get('q5', ''),
         package['answer set'].get('q6', ''),
         package['answer set'].get('q7', ''),
-        package['scenarios_all'].get('col1', ''),
-        package['scenarios_all'].get('col2', ''),
-        package['scenarios_all'].get('col3', ''),
-        package.get('scenario', ''),
+        package['scenarios_all']['col1'],
+        package['scenarios_all']['col2'],
+        package['scenarios_all']['col3'],
+        package['scenario'],
         package.get('preference_feedback', '')
     ]
 
-    # Append the row using the official GSheets API
-    try:
-        conn.write(worksheet="Form Responses 1", data=[row], append=True)
-        st.success("Data saved successfully!")
-    except Exception as e:
-        st.error(f"Failed to save data to Google Sheet: {e}")
+    # Create a DataFrame with the new row
+    new_data = pd.DataFrame([row], columns=[
+        'participant_number', 'q1', 'q2', 'q3', 'q4', 'q5', 'q6', 'q7',
+        'col1', 'col2', 'col3', 'scenario', 'preference_feedback'
+    ])
 
+    try:
+        # Try to read existing data to check if worksheet exists
+        existing_data = conn.read(worksheet="Form Responses 1")
+        # Append new row
+        updated_data = pd.concat([existing_data, new_data], ignore_index=True)
+        conn.update(worksheet="Form Responses 1", data=updated_data)
+    except:
+        # If worksheet doesn't exist, create it with the new data
+        conn.update(worksheet="Form Responses 1", data=new_data)
+
+    st.success("Data saved successfully!")
 
 
 
