@@ -194,16 +194,25 @@ def save_to_google_sheets(package, worksheet_name="Sheet1"):
         
         df = pd.DataFrame(data)
         
-        # Get existing data
-        existing_data = conn.read(worksheet=worksheet_name)
-        
-        if existing_data.empty:
-            # If no existing data, write with headers
-            conn.create(worksheet=worksheet_name, data=df)
-        else:
-            # Append to existing data
-            updated_data = pd.concat([existing_data, df], ignore_index=True)
-            conn.update(worksheet=worksheet_name, data=updated_data)
+        try:
+            # Try to read from the existing worksheet
+            existing_data = conn.read(worksheet=worksheet_name)
+            
+            if existing_data.empty:
+                # If the worksheet exists but is empty, write with headers
+                conn.create(worksheet=worksheet_name, data=df)
+            else:
+                # Append to existing data
+                updated_data = pd.concat([existing_data, df], ignore_index=True)
+                conn.update(worksheet=worksheet_name, data=updated_data)
+                
+        except Exception as e:
+            # If the worksheet doesn't exist, create it
+            if "not found" in str(e).lower() or "no sheet" in str(e).lower():
+                conn.create(worksheet=worksheet_name, data=df)
+            else:
+                # Re-raise other exceptions
+                raise e
         
         st.success("Data saved successfully to Google Sheets!")
         return True
@@ -211,7 +220,6 @@ def save_to_google_sheets(package, worksheet_name="Sheet1"):
     except Exception as e:
         st.error(f"Failed to save data to Google Sheet: {e}")
         return False
-        
 
 def extractChoices(msgs, testing):
     """
