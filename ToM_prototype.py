@@ -1,7 +1,3 @@
-
-
-
-
 from langchain_community.chat_message_histories import StreamlitChatMessageHistory
 from langchain.memory import ConversationBufferMemory
 from langchain_core.prompts import PromptTemplate
@@ -725,18 +721,17 @@ def stateAgent():
 
     if testing:
         print("Running stateAgent loop -- session state: ", st.session_state['agentState'])
-
-   package = {
-    "participant_number": st.session_state.get("participant_number", ""),
-    "answer set": {f"q{i+1}": st.session_state['summary_answers'].get(f"q{i+1}", "") for i in range(7)},
-    "scenarios_all": {
-        "col1": st.session_state.response_1['output_scenario'],
-        "col2": st.session_state.response_2['output_scenario'],
-        "col3": st.session_state.response_3['output_scenario']
-    },
-    "scenario": st.session_state.get("selected_scenario_text", ""),
-    "preference_feedback": ""
-}
+         package = {
+             "participant_number": st.session_state.get("participant_number", ""),
+            "answer set": {f"q{i+1}": st.session_state['summary_answers'].get(f"q{i+1}", "") for i in range(7)},
+             "scenarios_all": {
+                "col1": st.session_state.response_1['output_scenario'],
+                "col2": st.session_state.response_2['output_scenario'],
+                "col3": st.session_state.response_3['output_scenario']
+                 },
+             "scenario": st.session_state.get("selected_scenario_text", ""),
+             "preference_feedback": ""
+             }
 
     # Main loop -- selecting the right 'agent' each time
     if st.session_state['agentState'] == 'start':
