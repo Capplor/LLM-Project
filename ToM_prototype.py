@@ -573,8 +573,9 @@ def scenario_selection (popover, button_num, scenario):
 
 
 
-def reviewData(testing=False):
-    """Displays scenarios for review and collects user selection and feedback."""
+def reviewData(testing):
+    """Handles displaying scenarios and user selection for review."""
+
     if testing:
         testing_reviewSetUp()
 
@@ -582,15 +583,26 @@ def reviewData(testing=False):
         st.session_state['scenario_selection'] = '0'
 
     if st.session_state['scenario_selection'] == '0':
+        # Display scenarios and feedback options
         col1, col2, col3 = st.columns(3)
 
+        # Safely get feedback scores with proper error handling
         disable = {
-            'col1_fb': st.session_state.get('col1_fb', {}).get('score'),
-            'col2_fb': st.session_state.get('col2_fb', {}).get('score'),
-            'col3_fb': st.session_state.get('col3_fb', {}).get('score'),
+            'col1_fb': None,
+            'col2_fb': None,
+            'col3_fb': None,
         }
+        
+        for col in ['col1_fb', 'col2_fb', 'col3_fb']:
+            try:
+                if col in st.session_state and st.session_state[col] is not None:
+                    # Safely access the score with proper error handling
+                    if isinstance(st.session_state[col], dict) and 'score' in st.session_state[col]:
+                        disable[col] = st.session_state[col]['score']
+            except (KeyError, AttributeError, TypeError) as e:
+                st.warning(f"Error accessing feedback data: {e}")
+                disable[col] = None
 
-        # Scenario 1
         with col1:
             st.header("Scenario 1")
             st.write(st.session_state.response_1['output_scenario'])
@@ -604,7 +616,6 @@ def reviewData(testing=False):
                 args=('col1', st.session_state.response_1['output_scenario'])
             )
 
-        # Scenario 2
         with col2:
             st.header("Scenario 2")
             st.write(st.session_state.response_2['output_scenario'])
@@ -618,7 +629,6 @@ def reviewData(testing=False):
                 args=('col2', st.session_state.response_2['output_scenario'])
             )
 
-        # Scenario 3
         with col3:
             st.header("Scenario 3")
             st.write(st.session_state.response_3['output_scenario'])
@@ -634,17 +644,18 @@ def reviewData(testing=False):
 
         st.divider()
         st.chat_message("ai").write(
-            "Please review the scenarios above, provide feedback using 👍/👎, "
-            "and pick the one you like most to continue."
+            "Please have a look at the scenarios above. Use the 👍 and 👎  to leave a rating "
+            "and short comment on each of the scenarios. Then pick the one that you like the most to continue."
         )
 
-        # Popover buttons
+        # Popover buttons for selection
         b1, b2, b3 = st.columns(3)
         scenario_selection(b1.popover("Pick scenario 1"), "1", st.session_state.response_1['output_scenario'])
         scenario_selection(b2.popover("Pick scenario 2"), "2", st.session_state.response_2['output_scenario'])
         scenario_selection(b3.popover("Pick scenario 3"), "3", st.session_state.response_3['output_scenario'])
 
     else:
+        # A scenario was selected → store selection in session_state
         selected_idx = st.session_state['scenario_selection']
         if selected_idx == '1':
             st.session_state['selected_scenario_text'] = st.session_state.response_1['output_scenario']
@@ -653,8 +664,8 @@ def reviewData(testing=False):
         elif selected_idx == '3':
             st.session_state['selected_scenario_text'] = st.session_state.response_3['output_scenario']
 
+        # Move to finalise state
         st.session_state['agentState'] = 'finalise'
-
 
 
 
