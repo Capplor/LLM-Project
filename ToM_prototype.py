@@ -168,6 +168,9 @@ def getData (testing = False ):
         
         #st.text(st.write(response))
 def save_to_google_sheets(package, worksheet_name="Sheet1"):
+    """
+    Save answers, scenarios, final scenario, and feedback to Google Sheets.
+    """
     try:
         gsheets_secrets = st.secrets["connections"]["gsheets"]
         spreadsheet_url = gsheets_secrets["spreadsheet"]
@@ -200,39 +203,39 @@ def save_to_google_sheets(package, worksheet_name="Sheet1"):
         except gspread.exceptions.WorksheetNotFound:
             worksheet = sh.add_worksheet(title=worksheet_name, rows=100, cols=20)
 
-        # Extract answers safely
-        answers_list = package.get("answer set", [])
-        if not isinstance(answers_list, list):
-            answers_list = []
+        answers = package.get("answer set", {})
 
-        # Map answers list to q1–q7
-        answer_dict = {f"q{i+1}": answers_list[i] if i < len(answers_list) else "" for i in range(7)}
-
-        # Prepare row
-        new_row = pd.DataFrame([{
-            "participant_number": package.get("participant_number", ""),
-            **answer_dict,
-            "scenario_1": package.get("scenarios_all", {}).get("col1", ""),
-            "scenario_2": package.get("scenarios_all", {}).get("col2", ""),
-            "scenario_3": package.get("scenarios_all", {}).get("col3", ""),
-            "final_scenario": package.get("scenario", ""),
-            "preference_feedback": package.get("preference_feedback", ""),
-            "chat_history": json.dumps(package.get("chat history", []), ensure_ascii=False)
-        }])
+        new_row = [
+            package.get("participant_number", ""),
+            answers.get("q1", ""),
+            answers.get("q2", ""),
+            answers.get("q3", ""),
+            answers.get("q4", ""),
+            answers.get("q5", ""),
+            answers.get("q6", ""),
+            answers.get("q7", ""),
+            package.get("scenarios_all", {}).get("col1", ""),
+            package.get("scenarios_all", {}).get("col2", ""),
+            package.get("scenarios_all", {}).get("col3", ""),
+            package.get("scenario", ""),
+            package.get("preference_feedback", "")
+        ]
 
         # Write headers if not present
-        headers = list(new_row.columns)
+        headers = [
+            "participant_number", "q1", "q2", "q3", "q4", "q5", "q6", "q7",
+            "scenario_1", "scenario_2", "scenario_3", "final_scenario", "preference_feedback"
+        ]
         existing = worksheet.get_all_values()
         if not existing or existing[0] != headers:
             worksheet.insert_row(headers, 1)
 
         # Append new row
-        worksheet.append_row(new_row.values.tolist()[0])
+        worksheet.append_row(new_row)
         st.success("Data saved successfully to Google Sheets!")
 
     except Exception as e:
         st.error(f"Failed to save data to Google Sheet: {e}")
-
 
 def extractChoices(msgs, testing):
     """
@@ -681,12 +684,12 @@ def finaliseScenario(package):
     st.write(package.get("scenario", "No scenario generated yet."))
     
     # Safely access answers
-    answers = package.get("answer set", []) or []
+    answers = package.get("answer set", {}) or {}
 
     st.subheader("Your Answers")
     if answers:
-        for i in range(7):  # Q1 to Q7
-            st.write(f"**Q{i+1}: {answers[i] if i < len(answers) else ''}**")
+        for i in range(1, 8):  # Q1 to Q7
+            st.write(f"**Q{i}: {answers.get(f'q{i}', '')}**")
     else:
         st.info("No answers collected yet.")
     
@@ -704,12 +707,11 @@ def finaliseScenario(package):
             # Update package with feedback
             package["preference_feedback"] = feedback_text
             
-            # Save everything to Google Sheets
+            # Save to Google Sheets
             save_to_google_sheets(package)
-            
             st.success("Thank you! Your feedback has been submitted.")
             
-            # Refresh the page to clear form (Streamlit 1.49+)
+            # Refresh the page to move forward
             st.experimental_rerun()
 
 
@@ -724,25 +726,17 @@ def stateAgent():
     if testing:
         print("Running stateAgent loop -- session state: ", st.session_state['agentState'])
 
-    # Build package from session_state
-    package = {
-        "answer set": {
-            "participant_number": st.session_state.get("participant_number", ""),
-            "q1": st.session_state.get("q1", ""),
-            "q2": st.session_state.get("q2", ""),
-            "q3": st.session_state.get("q3", ""),
-            "q4": st.session_state.get("q4", ""),
-            "q5": st.session_state.get("q5", ""),
-            "q6": st.session_state.get("q6", ""),
-            "q7": st.session_state.get("q7", "")
-        },
-        "scenarios_all": {
-            "col1": st.session_state.get("scenario_1", ""),
-            "col2": st.session_state.get("scenario_2", ""),
-            "col3": st.session_state.get("scenario_3", "")
-        },
-        "scenario": st.session_state.get("final_scenario", "")
-    }
+   package = {
+    "participant_number": st.session_state.get("participant_number", ""),
+    "answer set": {f"q{i+1}": st.session_state['summary_answers'].get(f"q{i+1}", "") for i in range(7)},
+    "scenarios_all": {
+        "col1": st.session_state.response_1['output_scenario'],
+        "col2": st.session_state.response_2['output_scenario'],
+        "col3": st.session_state.response_3['output_scenario']
+    },
+    "scenario": st.session_state.get("selected_scenario_text", ""),
+    "preference_feedback": ""
+}
 
     # Main loop -- selecting the right 'agent' each time
     if st.session_state['agentState'] == 'start':
