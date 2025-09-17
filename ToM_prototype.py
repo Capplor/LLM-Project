@@ -166,59 +166,83 @@ def getData (testing = False ):
 def save_to_google_sheets(package, worksheet_name="Sheet1"):
     """
     Saves answers, scenarios, final scenario, and feedback to Google Sheets.
-    Uses the existing Streamlit GSheets connection.
+    Uses gspread directly for more reliable worksheet handling.
     """
     try:
-        # Get the existing connection
-        conn = st.connection("gsheets", type=GSheetsConnection)
+        # Get credentials from secrets
+        gsheets_secrets = st.secrets["connections"]["gsheets"]
+        spreadsheet_url = gsheets_secrets["spreadsheet"]
         
-        # Prepare data for saving
-        answers = package.get("answer_set", {})
-        
-        # Create a DataFrame with the proper structure
-        data = {
-            "participant_number": [answers.get(0, "")],
-            "q1": [answers.get(1, "")],
-            "q2": [answers.get(2, "")],
-            "q3": [answers.get(3, "")],
-            "q4": [answers.get(4, "")],
-            "q5": [answers.get(5, "")],
-            "q6": [answers.get(6, "")],
-            "q7": [answers.get(7, "")],
-            "scenario_1": [package.get("scenarios_all", {}).get("col1", "")],
-            "scenario_2": [package.get("scenarios_all", {}).get("col2", "")],
-            "scenario_3": [package.get("scenarios_all", {}).get("col3", "")],
-            "final_scenario": [package.get("scenario", "")],
-            "preference_feedback": [package.get("preference_feedback", "")]
+        credentials_dict = {
+            "type": gsheets_secrets["type"],
+            "project_id": gsheets_secrets["project_id"],
+            "private_key_id": gsheets_secrets["private_key_id"],
+            "private_key": gsheets_secrets["private_key"].replace("\\n", "\n"),
+            "client_email": gsheets_secrets["client_email"],
+            "client_id": gsheets_secrets["client_id"],
+            "auth_uri": gsheets_secrets["auth_uri"],
+            "token_uri": gsheets_secrets["token_uri"],
+            "auth_provider_x509_cert_url": gsheets_secrets["auth_provider_x509_cert_url"],
+            "client_x509_cert_url": gsheets_secrets["client_x509_cert_url"],
         }
+
+        scopes = [
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive"
+        ]
         
-        df = pd.DataFrame(data)
+        credentials = Credentials.from_service_account_info(credentials_dict, scopes=scopes)
+        gc = gspread.authorize(credentials)
+        sh = gc.open_by_url(spreadsheet_url)
         
+        # Check if worksheet exists, if not create it
         try:
-            # Try to read from the existing worksheet
-            existing_data = conn.read(worksheet=worksheet_name)
-            
-            if existing_data.empty:
-                # If the worksheet exists but is empty, write with headers
-                conn.create(worksheet=worksheet_name, data=df)
-            else:
-                # Append to existing data
-                updated_data = pd.concat([existing_data, df], ignore_index=True)
-                conn.update(worksheet=worksheet_name, data=updated_data)
-                
-        except Exception as e:
-            # If the worksheet doesn't exist, create it
-            if "not found" in str(e).lower() or "no sheet" in str(e).lower():
-                conn.create(worksheet=worksheet_name, data=df)
-            else:
-                # Re-raise other exceptions
-                raise e
+            worksheet = sh.worksheet(worksheet_name)
+        except gspread.exceptions.WorksheetNotFound:
+            worksheet = sh.add_worksheet(title=worksheet_name, rows=100, cols=20)
+        
+        # Prepare the row data
+        answers = package.get("answer_set", {})
+        new_row = [
+            answers.get(0, ""),  # participant number
+            answers.get(1, ""),  # Q1
+            answers.get(2, ""),  # Q2
+            answers.get(3, ""),  # Q3
+            answers.get(4, ""),  # Q4
+            answers.get(5, ""),  # Q5
+            answers.get(6, ""),  # Q6
+            answers.get(7, ""),  # Q7
+            package.get("scenarios_all", {}).get("col1", ""),
+            package.get("scenarios_all", {}).get("col2", ""),
+            package.get("scenarios_all", {}).get("col3", ""),
+            package.get("scenario", ""),
+            package.get("preference_feedback", "")
+        ]
+        
+        # Get the existing data to check for headers
+        existing = worksheet.get_all_values()
+        headers = [
+            "participant_number", "q1", "q2", "q3", "q4", "q5", "q6", "q7",
+            "scenario_1", "scenario_2", "scenario_3", "final_scenario", "preference_feedback"
+        ]
+        
+        # Add headers if they don't exist
+        if not existing or existing[0] != headers:
+            worksheet.insert_row(headers, 1)
+        
+        # Append the new row
+        worksheet.append_row(new_row)
         
         st.success("Data saved successfully to Google Sheets!")
         return True
         
     except Exception as e:
         st.error(f"Failed to save data to Google Sheet: {e}")
+        # Provide more detailed error information
+        if "quota" in str(e).lower():
+            st.info("This might be a Google Sheets quota limitation. Please try again later.")
+        elif "permission" in str(e).lower():
+            st.info("Please check if the service account has permission to access the Google Sheet.")
         return False
 
 def extractChoices(msgs, testing):
@@ -441,35 +465,38 @@ def testing_reviewSetUp():
 
 
 def click_selection_yes(button_num, scenario):
-    """ Function called on_submit when a final scenario is selected. 
-    
-    Saves all key information in the st.session_state.scenario_package persistent variable.
-    """
+    """ Function called on_submit when a final scenario is selected. """
     st.session_state.scenario_selection = button_num
     
-    ## if we are testing, the answer_set might not have been set & needs to be added:
+    # Store the selected scenario text
+    if button_num == '1':
+        selected_scenario = st.session_state.response_1['output_scenario']
+    elif button_num == '2':
+        selected_scenario = st.session_state.response_2['output_scenario']
+    else:
+        selected_scenario = st.session_state.response_3['output_scenario']
+    
+    # Ensure we have an answer set
     if 'answer_set' not in st.session_state:
-        st.session_state['answer_set'] = "Testing - no answers"
-
-    ## save all important information in one package into st.session state
-
+        st.session_state['answer_set'] = extractChoices(msgs, False)
+    
+    # Create the complete package with proper key names
     scenario_dict = {
         'col1': st.session_state.response_1['output_scenario'],
         'col2': st.session_state.response_2['output_scenario'],
         'col3': st.session_state.response_3['output_scenario'],
-        'fb1': st.session_state['col1_fb'],
-        'fb2': st.session_state['col2_fb'],
-        'fb3': st.session_state['col3_fb']
     }
-
+    
     st.session_state.scenario_package = {
-            'scenario': scenario,
-            'answer set':  st.session_state['answer_set'],
-            'judgment': st.session_state['scenario_decision'],
-            'scenarios_all': scenario_dict,
-            'chat history': msgs
+        'scenario': selected_scenario,
+        'answer_set': st.session_state['answer_set'],  # Changed from 'answer set' to 'answer_set'
+        'judgment': st.session_state.get('scenario_decision', ''),
+        'scenarios_all': scenario_dict,
     }
-
+    
+    # Move to finalise state
+    st.session_state['agentState'] = 'finalise'
+    st.rerun()
 
 def click_selection_no():
     """ Function called on_submit when a user clicks on 'actually, let me try another one'. 
