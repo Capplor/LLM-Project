@@ -169,6 +169,7 @@ def getData (testing = False ):
         #st.text(st.write(response))
 def save_to_google_sheets(package, worksheet_name="Sheet1"):
     try:
+        import json  # ensure json is imported
         gsheets_secrets = st.secrets["connections"]["gsheets"]
         spreadsheet_url = gsheets_secrets["spreadsheet"]
 
@@ -200,15 +201,13 @@ def save_to_google_sheets(package, worksheet_name="Sheet1"):
         except gspread.exceptions.WorksheetNotFound:
             worksheet = sh.add_worksheet(title=worksheet_name, rows=100, cols=20)
 
-        # Extract answers safely
-        answers = package.get("answer set", {})  # now a dict
-        if not isinstance(answers, dict):
-            answers = {}
+        # Extract answers safely (dict now)
+        answers = package.get("answer set", {}) or {}
 
-        # Prepare row
+        # Prepare row as DataFrame
         new_row = pd.DataFrame([{
             "participant_number": package.get("participant_number", ""),
-            **{f"q{i}": answers.get(f"q{i}", "") for i in range(1, 9)},  # q1-q8
+            **{f"q{i}": answers.get(f"q{i}", "") for i in range(1, 9)},
             "scenario_1": package.get("scenarios_all", {}).get("col1", ""),
             "scenario_2": package.get("scenarios_all", {}).get("col2", ""),
             "scenario_3": package.get("scenarios_all", {}).get("col3", ""),
@@ -219,7 +218,17 @@ def save_to_google_sheets(package, worksheet_name="Sheet1"):
 
         # Write headers if not present
         headers = list(new_row.columns)
-        existing = worksheet.get_all_values
+        existing = worksheet.get_all_values()
+        if not existing or existing[0] != headers:
+            worksheet.insert_row(headers, 1)
+
+        # Append new row
+        worksheet.append_row(new_row.values.tolist()[0])
+        st.success("Data saved successfully to Google Sheets!")
+
+    except Exception as e:
+        st.error(f"Failed to save data to Google Sheet: {e}")
+
 
 def extractChoices(msgs, testing):
     """Extract answers to questions from conversation history, skipping the intro."""
