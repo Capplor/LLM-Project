@@ -123,6 +123,13 @@ def getData (testing = False ):
     if len(msgs.messages) == 0:
         msgs.add_ai_message(llm_prompts.questions_intro)
 
+    # Extract participant ID from the first human message
+    if 'participant_id' not in st.session_state:
+        for msg in msgs.messages:
+            if msg.type == "human" and not st.session_state.get('participant_id'):
+                st.session_state['participant_id'] = msg.content
+                break
+
 
    # as Streamlit refreshes page after each input, we have to refresh all messages. 
    # in our case, we are just interested in showing the last AI-Human turn of the conversation for simplicity
@@ -276,20 +283,34 @@ def extractChoices(msgs, testing):
         ])
 
     # Call the chain
-    try:
-        extractedChoices = extractionChain.invoke({"conversation_history": conversation_text})
-        
-        # Ensure we have all required keys
-        required_keys = list(range(8))  # 0 for participant ID, 1-7 for questions
-        for key in required_keys:
-            if key not in extractedChoices:
-                extractedChoices[key] = ""
-                
-        return extractedChoices
-    except Exception as e:
-        st.error(f"Error extracting choices: {e}")
-        # Return a default structure if extraction fails
-        return {i: "" for i in range(8)}
+    extractedChoices = extractionChain.invoke({"conversation_history": conversation_text})
+    
+    # Map the descriptive keys to numerical indices
+    # This mapping should match your question order
+    key_mapping = {
+        "what": 1,  # Q1: Recall a time when you misunderstood...
+        "context": 2,  # Q2: Why did you assume something?
+        "procedure": 3,  # Q3: How did this episode change your beliefs?
+        "understanding": 4,  # Q4: Keeping this situation in mind...
+        "categorical_vs_continuous": 5,  # Q5: Moving beyond this situation...
+        "similarity": 6,  # Q6: Do you think it is easier...
+        "social_perception": 7,  # Q7: Do you think physical characteristics...
+    }
+    
+    # Create a new dictionary with numerical indices
+    mapped_answers = {0: ""}  # Start with participant ID as empty
+    
+    # Map the extracted answers to numerical indices
+    for key, value in extractedChoices.items():
+        if key in key_mapping:
+            mapped_answers[key_mapping[key]] = value
+    
+    # Ensure all indices from 0 to 7 are present
+    for i in range(8):
+        if i not in mapped_answers:
+            mapped_answers[i] = ""
+    
+    return mapped_answers
 
 
 def collectFeedback(answer, column_id,  scenario):
