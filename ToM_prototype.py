@@ -215,10 +215,12 @@ def save_to_google_sheets(package, worksheet_name="Sheet1"):
             answers.get("what", ""),  # Q1
             answers.get("context", ""),  # Q2
             answers.get("procedure", ""),  # Q3
-            answers.get("understanding", ""),  # Q4
-            answers.get("categorical_vs_continuous", ""),  # Q5
-            answers.get("similarity", ""),  # Q6
-            answers.get("social_perception", ""),  # Q7
+            answers.get("mental_states", ""),  # Q4
+            answers.get("mind_vs_emo", ""),  # Q5
+            answers.get("understanding", ""),  # Q6
+            answers.get("categorical_vs_continuous", ""),  # Q7
+            answers.get("similarity", ""),  # Q8
+            answers.get("social_perception", ""),  # Q9
             package.get("scenarios_all", {}).get("col1", ""),
             package.get("scenarios_all", {}).get("col2", ""),
             package.get("scenarios_all", {}).get("col3", ""),
@@ -229,7 +231,7 @@ def save_to_google_sheets(package, worksheet_name="Sheet1"):
         # Get the existing data to check for headers
         existing = worksheet.get_all_values()
         headers = [
-            "participant_number", "q1", "q2", "q3", "q4", "q5", "q6", "q7",
+            "participant_number", "q1", "q2", "q3", "q4", "q5", "q6", "q7","q8","q9",
             "scenario_1", "scenario_2", "scenario_3", "final_scenario", "preference_feedback"
         ]
         
@@ -289,6 +291,15 @@ def extractChoices(msgs, testing):
         
         # Add participant ID to the extracted choices
         extractedChoices["participant_id"] = st.session_state.get('participant_id', '')
+                # Ensure all expected keys are present
+        expected_keys = [
+            "what", "context", "procedure", "mental_states", "mind_vs_emo",
+            "understanding", "categorical_vs_continuous", "similarity", "social_perception"
+        ]
+        
+        for key in expected_keys:
+            if key not in extractedChoices:
+                extractedChoices[key] = ""
         
         return extractedChoices
         
@@ -300,6 +311,8 @@ def extractChoices(msgs, testing):
             "what": "",
             "context": "",
             "procedure": "",
+            "mental_states": "",
+            "mind_vs_emo": "",
             "understanding": "",
             "categorical_vs_continuous": "",
             "similarity": "",
@@ -363,7 +376,6 @@ def collectFeedback(answer, column_id,  scenario):
 
 
 
-@traceable # Auto-trace this function
 @traceable # Auto-trace this function
 def summariseData(testing = False): 
     """Takes the extracted answers to questions and generates three scenarios, based on selected prompts. """
