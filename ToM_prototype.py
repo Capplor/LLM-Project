@@ -127,9 +127,13 @@ def getData (testing = False ):
     if 'participant_id' not in st.session_state:
         for msg in msgs.messages:
             if msg.type == "human" and not st.session_state.get('participant_id'):
-                st.session_state['participant_id'] = msg.content
+                # Check if this is likely the participant ID (not a response to a question)
+                if "participant" in msg.content.lower() or "id" in msg.content.lower():
+                    st.session_state['participant_id'] = msg.content
+                else:
+                    # If it's not clearly a participant ID, assume it's the first answer
+                    st.session_state['participant_id'] = "Unknown"
                 break
-
 
    # as Streamlit refreshes page after each input, we have to refresh all messages. 
    # in our case, we are just interested in showing the last AI-Human turn of the conversation for simplicity
@@ -256,61 +260,67 @@ def extractChoices(msgs, testing):
     """
     Uses bespoke LLM prompt to extract answers to given questions from a conversation history into a JSON object.
     """
-    # Set up the extraction LLM
-    extraction_llm = ChatOpenAI(
-        temperature=0.1, 
-        model=st.session_state.llm_model, 
-        openai_api_key=openai_api_key
-    )
+    try:
+        # Set up the extraction LLM
+        extraction_llm = ChatOpenAI(
+            temperature=0.1, 
+            model=st.session_state.llm_model, 
+            openai_api_key=openai_api_key
+        )
 
-    # Prompt template
-    extraction_template = PromptTemplate(
-        input_variables=["conversation_history"],
-        template=llm_prompts.extraction_prompt_template
-    )
+        # Prompt template
+        extraction_template = PromptTemplate(
+            input_variables=["conversation_history"],
+            template=llm_prompts.extraction_prompt_template
+        )
 
-    # JSON parser
-    json_parser = SimpleJsonOutputParser()
-    extractionChain = extraction_template | extraction_llm | json_parser
+        # JSON parser
+        json_parser = SimpleJsonOutputParser()
+        extractionChain = extraction_template | extraction_llm | json_parser
 
-    # Prepare conversation text
-    if testing:
-        conversation_text = llm_prompts.example_messages
-    else:
-        # Convert messages object into a single string
-        conversation_text = "\n".join([
-            f"{m.type}: {m.content}" for m in msgs.messages
-        ])
+        # Prepare conversation text
+        if testing:
+            conversation_text = llm_prompts.example_messages
+        else:
+            # Convert messages object into a single string
+            conversation_text = "\n".join([
+                f"{m.type}: {m.content}" for m in msgs.messages
+            ])
 
-    # Call the chain
-    extractedChoices = extractionChain.invoke({"conversation_history": conversation_text})
-    
-    # Map the descriptive keys to numerical indices
-    # This mapping should match your question order
-    key_mapping = {
-        "what": 1,  # Q1: Recall a time when you misunderstood...
-        "context": 2,  # Q2: Why did you assume something?
-        "procedure": 3,  # Q3: How did this episode change your beliefs?
-        "understanding": 4,  # Q4: Keeping this situation in mind...
-        "categorical_vs_continuous": 5,  # Q5: Moving beyond this situation...
-        "similarity": 6,  # Q6: Do you think it is easier...
-        "social_perception": 7,  # Q7: Do you think physical characteristics...
-    }
-    
-    # Create a new dictionary with numerical indices
-    mapped_answers = {0: ""}  # Start with participant ID as empty
-    
-    # Map the extracted answers to numerical indices
-    for key, value in extractedChoices.items():
-        if key in key_mapping:
-            mapped_answers[key_mapping[key]] = value
-    
-    # Ensure all indices from 0 to 7 are present
-    for i in range(8):
-        if i not in mapped_answers:
-            mapped_answers[i] = ""
-    
-    return mapped_answers
+        # Call the chain
+        extractedChoices = extractionChain.invoke({"conversation_history": conversation_text})
+        
+        # Map the descriptive keys to numerical indices
+        key_mapping = {
+            "what": 1,  # Q1: Recall a time when you misunderstood...
+            "context": 2,  # Q2: Why did you assume something?
+            "procedure": 3,  # Q3: How did this episode change your beliefs?
+            "understanding": 4,  # Q4: Keeping this situation in mind...
+            "categorical_vs_continuous": 5,  # Q5: Moving beyond this situation...
+            "similarity": 6,  # Q6: Do you think it is easier...
+            "social_perception": 7,  # Q7: Do you think physical characteristics...
+        }
+        
+        # Create a new dictionary with numerical indices
+        participant_id = st.session_state.get('participant_id', '')
+        mapped_answers = {0: participant_id}  # Use the actual participant ID
+        
+        # Map the extracted answers to numerical indices
+        for key, value in extractedChoices.items():
+            if key in key_mapping:
+                mapped_answers[key_mapping[key]] = value
+        
+        # Ensure all indices from 0 to 7 are present
+        for i in range(8):
+            if i not in mapped_answers:
+                mapped_answers[i] = ""
+        
+        return mapped_answers
+        
+    except Exception as e:
+        st.error(f"Error extracting choices: {e}")
+        # Return a default structure if extraction fails
+        return {i: "" for i in range(8)}
 
 
 def collectFeedback(answer, column_id,  scenario):
@@ -839,6 +849,5 @@ else:
 DEBUG = st.sidebar.checkbox("Debug Mode", value=False)
 
 # In the summariseData function, add this after extracting choices:
-if DEBUG:
+if DEBUG and 'answer_set' in st.session_state:
     st.sidebar.write("Extracted Answers:", st.session_state['answer_set'])
-           
