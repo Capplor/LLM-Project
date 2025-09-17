@@ -15,6 +15,7 @@ from streamlit_feedback import streamlit_feedback
 from streamlit_gsheets import GSheetsConnection
 from functools import partial
 import gspread
+import json
 from google.oauth2.service_account import Credentials
 
 import os
@@ -200,20 +201,14 @@ def save_to_google_sheets(package, worksheet_name="Sheet1"):
             worksheet = sh.add_worksheet(title=worksheet_name, rows=100, cols=20)
 
         # Extract answers safely
-        answers = package.get("answer set", [])
-        if not isinstance(answers, list):
-            answers = []
+        answers = package.get("answer set", {})  # now a dict
+        if not isinstance(answers, dict):
+            answers = {}
 
         # Prepare row
         new_row = pd.DataFrame([{
-            "participant_number": answers[0] if len(answers) > 0 else "",
-            "q1": answers[1] if len(answers) > 1 else "",
-            "q2": answers[2] if len(answers) > 2 else "",
-            "q3": answers[3] if len(answers) > 3 else "",
-            "q4": answers[4] if len(answers) > 4 else "",
-            "q5": answers[5] if len(answers) > 5 else "",
-            "q6": answers[6] if len(answers) > 6 else "",
-            "q7": answers[8] if len(answers) > 8 else "",   # <-- last one (index 8)
+            "participant_number": package.get("participant_number", ""),
+            **{f"q{i}": answers.get(f"q{i}", "") for i in range(1, 9)},  # q1-q8
             "scenario_1": package.get("scenarios_all", {}).get("col1", ""),
             "scenario_2": package.get("scenarios_all", {}).get("col2", ""),
             "scenario_3": package.get("scenarios_all", {}).get("col3", ""),
@@ -224,47 +219,39 @@ def save_to_google_sheets(package, worksheet_name="Sheet1"):
 
         # Write headers if not present
         headers = list(new_row.columns)
-        existing = worksheet.get_all_values()
-        if not existing or existing[0] != headers:
-            worksheet.insert_row(headers, 1)
+        existing = worksheet.get_all_values
 
-        # Append new row
-        worksheet.append_row(new_row.values.tolist()[0])
-        st.success("Data saved successfully to Google Sheets!")
-
-    except Exception as e:
-        st.error(f"Failed to save data to Google Sheet: {e}")
-
-
-
-def extractChoices(msgs, testing ):
-    """Uses bespoke LLM prompt to extract answers to given questions from a conversation history into a JSON object. 
-
-    Arguments: 
-    msgs (str): conversations history to extract from -- this can be streamlit memory, or a dummy variable during testing
-    testing (bool): bool variable that will insert a dummy conversation instead of engaging with the user
-
-    """
-
-    ## set up our extraction LLM -- low temperature for repeatable results
-    extraction_llm = ChatOpenAI(temperature=0.1, model=st.session_state.llm_model, openai_api_key=openai_api_key)
-
-    ## taking the prompt from lc_prompts.py file
-    extraction_template = PromptTemplate(input_variables=["conversation_history"], template = llm_prompts.extraction_prompt_template)
-
-    ## set up the rest of the chain including the json parser we will need. 
+def extractChoices(msgs, testing):
+    """Extract answers to questions from conversation history, skipping the intro."""
+    
+    extraction_llm = ChatOpenAI(
+        temperature=0.1,
+        model=st.session_state.llm_model,
+        openai_api_key=openai_api_key
+    )
+    
+    extraction_template = PromptTemplate(
+        input_variables=["conversation_history"], 
+        template=llm_prompts.extraction_prompt_template
+    )
+    
     json_parser = SimpleJsonOutputParser()
     extractionChain = extraction_template | extraction_llm | json_parser
-
     
-    # allow for testing the flow with pre-generated messages -- see testing_prompts.py
+    # Prepare conversation history
     if testing:
-        extractedChoices = extractionChain.invoke({"conversation_history" : llm_prompts.example_messages})
-    else: 
-        extractedChoices = extractionChain.invoke({"conversation_history" : msgs})
+        conversation_history = llm_prompts.example_messages
+    else:
+        # Skip the first message (intro from the AI)
+        conversation_history = msgs.messages[1:] if len(msgs.messages) > 1 else msgs.messages
     
-
-    return(extractedChoices)
+    # Combine the messages into a single string (or however your prompt expects it)
+    conversation_text = "\n".join([m["content"] for m in conversation_history])
+    
+    # Invoke the extraction chain
+    extractedChoices = extractionChain.invoke({"conversation_history": conversation_text})
+    
+    return extractedChoices
 
 
 def collectFeedback(answer, column_id,  scenario):
@@ -666,15 +653,14 @@ def finaliseScenario(package):
     
     # Safely access answers
     answers = package.get("answer set", {}) or {}
-
+    
     st.subheader("Your Answers")
     if answers:
         for i in range(1, 9):  # Q1 to Q8
             st.write(f"**Q{i}: {answers.get(f'q{i}', '')}**")
     else:
         st.info("No answers collected yet.")
-
-    # Feedback input
+    
     feedback_text = st.text_area(
         "Please share your preference or feedback on this scenario:", 
         key="feedback_text_area"
@@ -682,12 +668,12 @@ def finaliseScenario(package):
     
     with st.form(key="feedback_form"):
         submit_btn = st.form_submit_button("Submit Feedback")
+        
         if submit_btn:
             package["preference_feedback"] = feedback_text
-
-            # Prepare row for Google Sheets
+            
             new_row = pd.DataFrame([{
-                "participant_number": package.get("answer set", {}).get("participant_number", ""),
+                "participant_number": package.get("participant_number", ""),
                 **{f"q{i}": answers.get(f"q{i}", "") for i in range(1, 9)},
                 "scenario_1": package.get("scenarios_all", {}).get("col1", ""),
                 "scenario_2": package.get("scenarios_all", {}).get("col2", ""),
@@ -695,14 +681,13 @@ def finaliseScenario(package):
                 "final_scenario": package.get("scenario", ""),
                 "preference_feedback": feedback_text
             }])
-
+            
             try:
+                import json  # <-- ensures json.dumps works if needed
                 save_to_google_sheets(new_row)
                 st.success("Thank you! Your feedback has been submitted.")
-                st.experimental_rerun()
             except Exception as e:
                 st.error(f"Failed to save data to Google Sheet: {e}")
-
 
 
 
