@@ -166,62 +166,63 @@ def getData (testing = False ):
 def save_to_google_sheets(package, worksheet_name="Sheet1"):
     """
     Saves answers, scenarios, final scenario, and feedback to Google Sheets.
-    Uses both Streamlit connection and direct gspread for better reliability.
+    Tries Streamlit GSheets connection first, then falls back to direct gspread.
     """
     try:
-        # Try using Streamlit's connection first
+        # --- Prepare data ---
+        answers = package.get("answer_set", {})
+        scenarios = package.get("scenarios_all", {})
+        feedback = package.get("preference_feedback", "")
+
+        # Ensure keys exist
+        participant_number = answers.get("0", "")
+        q_values = [answers.get(str(i), "") for i in range(1, 8)]
+        scenario_values = [
+            scenarios.get("col1", ""),
+            scenarios.get("col2", ""),
+            scenarios.get("col3", "")
+        ]
+        feedback_values = [feedback]
+
+        # Construct DataFrame
+        data_dict = {
+            "participant_number": [participant_number],
+            "q1": [q_values[0]],
+            "q2": [q_values[1]],
+            "q3": [q_values[2]],
+            "q4": [q_values[3]],
+            "q5": [q_values[4]],
+            "q6": [q_values[5]],
+            "q7": [q_values[6]],
+            "scenario_1": [scenario_values[0]],
+            "scenario_2": [scenario_values[1]],
+            "scenario_3": [scenario_values[2]],
+            "final_scenario": [package.get("scenario", "")],
+            "preference_feedback": feedback_values
+        }
+
+        df = pd.DataFrame(data_dict)
+
+        # --- Try Streamlit GSheets connection ---
         try:
             conn = st.connection("gsheets", type=GSheetsConnection)
+            existing_data = conn.read(worksheet=worksheet_name)
+            if existing_data is not None and not existing_data.empty:
+                updated_data = pd.concat([existing_data, df], ignore_index=True)
+                conn.update(worksheet=worksheet_name, data=updated_data)
+            else:
+                conn.create(worksheet=worksheet_name, data=df)
             
-            # Prepare data for saving
-            answers = package.get("answer_set", {})
-            
-            # Create a DataFrame with the proper structure
-            data = {
-                "participant_number": [answers.get(0, "")],
-                "q1": [answers.get(1, "")],
-                "q2": [answers.get(2, "")],
-                "q3": [answers.get(3, "")],
-                "q4": [answers.get(4, "")],
-                "q5": [answers.get(5, "")],
-                "q6": [answers.get(6, "")],
-                "q7": [answers.get(7, "")],
-                "scenario_1": [package.get("scenarios_all", {}).get("col1", "")],
-                "scenario_2": [package.get("scenarios_all", {}).get("col2", "")],
-                "scenario_3": [package.get("scenarios_all", {}).get("col3", "")],
-                "final_scenario": [package.get("scenario", "")],
-                "preference_feedback": [package.get("preference_feedback", "")]
-            }
-            
-            df = pd.DataFrame(data)
-            
-            # Try to append to the existing sheet
-            try:
-                existing_data = conn.read(worksheet=worksheet_name)
-                if not existing_data.empty:
-                    # Append to existing data
-                    updated_data = pd.concat([existing_data, df], ignore_index=True)
-                    conn.update(worksheet=worksheet_name, data=updated_data)
-                else:
-                    # Create new sheet with data
-                    conn.create(worksheet=worksheet_name, data=df)
-                    
-                st.success("Data saved successfully to Google Sheets!")
-                return True
-                
-            except Exception as e:
-                st.warning(f"Streamlit connection method failed: {e}. Trying alternative method...")
-                # Fall through to alternative method
-                
+            st.success("Data saved successfully via Streamlit GSheets connection!")
+            return True
+
         except Exception as e:
-            st.warning(f"Could not establish Streamlit connection: {e}. Trying alternative method...")
-        
-        # Alternative method using direct gspread connection
+            st.warning(f"Streamlit GSheets connection failed: {e}. Trying gspread fallback...")
+
+        # --- Fallback: direct gspread ---
         try:
-            # Get credentials from secrets
             gsheets_secrets = st.secrets["connections"]["gsheets"]
             spreadsheet_url = gsheets_secrets["spreadsheet"]
-            
             credentials_dict = {
                 "type": gsheets_secrets["type"],
                 "project_id": gsheets_secrets["project_id"],
@@ -234,61 +235,40 @@ def save_to_google_sheets(package, worksheet_name="Sheet1"):
                 "auth_provider_x509_cert_url": gsheets_secrets["auth_provider_x509_cert_url"],
                 "client_x509_cert_url": gsheets_secrets["client_x509_cert_url"],
             }
-
             scopes = [
                 "https://www.googleapis.com/auth/spreadsheets",
                 "https://www.googleapis.com/auth/drive"
             ]
-            
             credentials = Credentials.from_service_account_info(credentials_dict, scopes=scopes)
             gc = gspread.authorize(credentials)
             sh = gc.open_by_url(spreadsheet_url)
-            
+
             try:
                 worksheet = sh.worksheet(worksheet_name)
             except gspread.exceptions.WorksheetNotFound:
-                worksheet = sh.add_worksheet(title=worksheet_name, rows=100, cols=20)
-            
-            # Prepare the row data
-            answers = package.get("answer_set", {})
-            new_row = [
-                answers.get(0, ""),  # participant number
-                answers.get(1, ""),  # Q1
-                answers.get(2, ""),  # Q2
-                answers.get(3, ""),  # Q3
-                answers.get(4, ""),  # Q4
-                answers.get(5, ""),  # Q5
-                answers.get(6, ""),  # Q6
-                answers.get(7, ""),  # Q7
-                package.get("scenarios_all", {}).get("col1", ""),
-                package.get("scenarios_all", {}).get("col2", ""),
-                package.get("scenarios_all", {}).get("col3", ""),
-                package.get("scenario", ""),
-                package.get("preference_feedback", "")
-            ]
-            
-            # Get the existing data to check for headers
+                worksheet = sh.add_worksheet(title=worksheet_name, rows=100, cols=len(df.columns))
+
+            # Insert headers if missing
             existing = worksheet.get_all_values()
-            headers = [
-                "participant_number", "q1", "q2", "q3", "q4", "q5", "q6", "q7",
-                "scenario_1", "scenario_2", "scenario_3", "final_scenario", "preference_feedback"
-            ]
-            
+            headers = list(df.columns)
             if not existing or existing[0] != headers:
                 worksheet.insert_row(headers, 1)
-            
+
+            # Append row
+            new_row = [participant_number] + q_values + scenario_values + [package.get("scenario", "")] + feedback_values
             worksheet.append_row(new_row)
-            
-            st.success("Data saved successfully to Google Sheets!")
+
+            st.success("Data saved successfully via gspread fallback!")
             return True
-            
+
         except Exception as e:
-            st.error(f"Alternative method also failed: {e}")
+            st.error(f"gspread fallback failed: {e}")
             return False
-            
+
     except Exception as e:
-        st.error(f"Failed to save data to Google Sheet: {e}")
+        st.error(f"Unexpected error saving data: {e}")
         return False
+
         
 
 def extractChoices(msgs, testing):
