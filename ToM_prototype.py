@@ -168,8 +168,10 @@ def getData (testing = False ):
         
         #st.text(st.write(response))
 def save_to_google_sheets(package, worksheet_name="Sheet1"):
+    import gspread
+    from google.oauth2.service_account import Credentials
+
     try:
-        import json  # ensure json is imported
         gsheets_secrets = st.secrets["connections"]["gsheets"]
         spreadsheet_url = gsheets_secrets["spreadsheet"]
 
@@ -201,13 +203,20 @@ def save_to_google_sheets(package, worksheet_name="Sheet1"):
         except gspread.exceptions.WorksheetNotFound:
             worksheet = sh.add_worksheet(title=worksheet_name, rows=100, cols=20)
 
-        # Extract answers safely (dict now)
+        # Extract answers safely
         answers = package.get("answer set", {}) or {}
 
-        # Prepare row as DataFrame
+        # Prepare row as a list/dict
         new_row = pd.DataFrame([{
-            "participant_number": package.get("participant_number", ""),
-            **{f"q{i}": answers.get(f"q{i}", "") for i in range(1, 9)},
+            "participant_number": answers.get("participant_number", ""),
+            "q1": answers.get("q1", ""),
+            "q2": answers.get("q2", ""),
+            "q3": answers.get("q3", ""),
+            "q4": answers.get("q4", ""),
+            "q5": answers.get("q5", ""),
+            "q6": answers.get("q6", ""),
+            "q7": answers.get("q7", ""),
+            "q8": answers.get("q8", ""),
             "scenario_1": package.get("scenarios_all", {}).get("col1", ""),
             "scenario_2": package.get("scenarios_all", {}).get("col2", ""),
             "scenario_3": package.get("scenarios_all", {}).get("col3", ""),
@@ -224,7 +233,6 @@ def save_to_google_sheets(package, worksheet_name="Sheet1"):
 
         # Append new row
         worksheet.append_row(new_row.values.tolist()[0])
-        st.success("Data saved successfully to Google Sheets!")
 
     except Exception as e:
         st.error(f"Failed to save data to Google Sheet: {e}")
@@ -664,7 +672,12 @@ def updateFinalScenario (new_scenario):
     st.session_state.scenario_package['scenario'] = new_scenario
     st.session_state.scenario_package['judgment'] = "Ready as is!"
 
+
 def finaliseScenario(package):
+    """
+    Collects answers, final scenario, and feedback.
+    Safely handles missing keys and saves everything to Google Sheets.
+    """
     st.header("Review and Submit Your Feedback")
     
     # Show final scenario
@@ -673,7 +686,7 @@ def finaliseScenario(package):
     
     # Safely access answers
     answers = package.get("answer set", {}) or {}
-    
+
     st.subheader("Your Answers")
     if answers:
         for i in range(1, 9):  # Q1 to Q8
@@ -681,31 +694,25 @@ def finaliseScenario(package):
     else:
         st.info("No answers collected yet.")
     
+    # Feedback input
     feedback_text = st.text_area(
         "Please share your preference or feedback on this scenario:", 
         key="feedback_text_area"
     )
     
+    # Use a form to avoid duplicate button IDs
     with st.form(key="feedback_form"):
         submit_btn = st.form_submit_button("Submit Feedback")
         
         if submit_btn:
+            # Update package with feedback
             package["preference_feedback"] = feedback_text
             
-            new_row = pd.DataFrame([{
-                "participant_number": package.get("participant_number", ""),
-                **{f"q{i}": answers.get(f"q{i}", "") for i in range(1, 9)},
-                "scenario_1": package.get("scenarios_all", {}).get("col1", ""),
-                "scenario_2": package.get("scenarios_all", {}).get("col2", ""),
-                "scenario_3": package.get("scenarios_all", {}).get("col3", ""),
-                "final_scenario": package.get("scenario", ""),
-                "preference_feedback": feedback_text
-            }])
-            
+            # Save to Google Sheets
             try:
-                import json  # <-- ensures json.dumps works if needed
-                save_to_google_sheets(new_row)
+                save_to_google_sheets(package)  # package now includes answers
                 st.success("Thank you! Your feedback has been submitted.")
+                
             except Exception as e:
                 st.error(f"Failed to save data to Google Sheet: {e}")
 
