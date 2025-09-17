@@ -36,7 +36,7 @@ To proceed to the task, please confirm that you have read and understood this in
 
 persona = "You're a socio-cognitive scientist collecting information from people about their experiences where they have misinterpreted or misunderstood others' actions or behaviours."
 
-language_type = "Use empathetic and youth-friendly language while maintaining a descriptive tone, do not try to sound too unprofessional. Make sure you use what they are answering when framing the question"
+language_type = "Use empathetic and youth-friendly language while maintaining a descriptive tone, do not try to sound too unprofessional. Make sure you use what they are answering when framing the question but keep all the examples I use (e.g., starsigns or sporty"
 
 intro = """
 Hi there -- I'm collecting stories about social misunderstandings and possible reasons for them in the hope to explore and improve real-world social understanding. I'd appreciate if you could share your experience with me by answering a few questions.
