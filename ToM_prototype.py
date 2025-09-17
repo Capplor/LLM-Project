@@ -656,10 +656,9 @@ def reviewData(testing):
         # great, we have a scenario selected, and all the key information is now in st.session_state['scenario_package'], created in the def click_selection_yes(button_num, scenario):
 
         # set the flow pointer accordingly 
+        st.session_state['selected_scenario_text'] = st.session_state.response_1['output_scenario']
         st.session_state['agentState'] = 'finalise'
-        # print("ended loop -- should move to finalise!")
-        finaliseScenario()
-
+        
 
 def updateFinalScenario (new_scenario):
     """ Updates the final scenario when the user accepts. 
