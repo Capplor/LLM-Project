@@ -36,7 +36,7 @@ To proceed to the task, please confirm that you have read and understood this in
 
 persona = "You're a socio-cognitive scientist collecting information from people about their experiences where they have misinterpreted or misunderstood others' actions or behaviours."
 
-language_type = "Use empathetic and youth-friendly language while maintaining a descriptive tone, do not try to sound too unprofessional. Make sure you use what they are answering when framing the question but keep all the examples I use (e.g., starsigns or sporty"
+language_type = "Use empathetic and youth-friendly language while maintaining a descriptive tone, do not try to sound too unprofessional. Make sure you use what they are answering when framing the question but keep all the examples I use (e.g., physical characteristics, personality, star-sign or sporty metaphor). DO NOT REMOVE THEM. "
 
 intro = """
 Hi there -- I'm collecting stories about social misunderstandings and possible reasons for them in the hope to explore and improve real-world social understanding. I'd appreciate if you could share your experience with me by answering a few questions.
@@ -50,7 +50,7 @@ questions = [
     "How, if at all, do you think that this episode made you change your beliefs about this person?",
     "Did you think this person had motivations, intentions, hidden aims or emotions behind what happened (e.g., they behaved like this because they were upset or because they wanted to make you change your mind)?",
     "How similar do you think emotions, motivations, aims and intentions are? Could you expand on why?",
-    "Keeping this situation in mind, did you think about certain characteristics of this person (e.g., physical characteristics, personality, star-sign) before trying to understand/predict their behaviours? If yes, which ones?",
+    "Going back to the situation you described, did you think about certain characteristics of this person (e.g., physical characteristics, personality, star-sign) before trying to understand/predict their behaviours? If yes, which ones?",
     "Moving beyond this situation, Do you think people are divided into clear types (e.g. sporty vs not sporty), can be seen on a scale (e.g. somewhere in between not very sporty and very sporty), or a mix of these? Can you give an example?",
     "Do you think it is easier to understand people who are similar to you? Why?",
     "Do you think physical characteristics (e.g., eye colour) play a role in shaping your predictions (even unconsciously)? Why?",
@@ -127,7 +127,7 @@ Answer: "I thought they were upset and wanted me to notice that"
 Question:  How similar do you think emotions, motivations, aims and intentions are? Could you expand on why?
 Answer: "I think they are kinda similar as in people feel them but usually you can be sad for something and that changes your intentions"
 
-Question: Keeping this situation in mind, did you think about certain characteristics of this person (e.g., physical characteristics, personality, star-sign) before trying to understand/predict their behaviours? If yes, which ones?
+Question: Going back to the situation you described, did you think about certain characteristics of this person (e.g., physical characteristics, personality, star-sign) before trying to understand/predict their behaviours? If yes, which ones?
 Answer: "Yes, I considered her personality — she’s a bit dreamy and easily distracted but never mean, that is what threw me off. I don’t think things like appearance or star signs matter."
 
 Question: Moving beyond this situation, Do you think people are divided into clear types (e.g. sporty vs not sporty), can be seen on a scale (e.g. somewhere in between not very sporty and very sporty), or a mix of these? Can you give an example?
@@ -146,7 +146,7 @@ I assumed she was upset with me, because that’s usually what I think when some
 This experience showed me she wasn’t being rude — she just gets absorbed in her own thoughts sometimes. I stopped taking her reactions so personally after that. \
 At first, I believed she was upset and wanted me to notice it. \
 I think emotions, motivations, aims, and intentions are kind of similar because people feel them, but you can be sad about something and that can change your intentions. \
-I thought about her personality when trying to understand her behavior. She’s dreamy and easily distracted but never mean, which is why it threw me off. I don’t think things like appearance or star signs matter.\
+Going back to my classmate, I thought about her personality when trying to understand her behavior. She’s dreamy and easily distracted but never mean, which is why it threw me off. I don’t think things like appearance or star signs matter.\
 I believe people can be divided into clear types but also placed on a scale. For example, some people are obviously sporty, others are not, and many fall in between. One of my friends isn’t athletic overall but loves playing tennis. \
 It feels easier to understand people who are similar to me because I can predict what they might think or feel. At the same time, I think there’s a lot to learn from people who are very different. \
 I don’t think physical characteristics like eye color play a role in predicting behavior. I believe personality and behavior are better clues. \
