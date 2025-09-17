@@ -706,7 +706,7 @@ def finaliseScenario(package):
                 
                 # Reset the app after a delay
                 st.session_state['agentState'] = 'completed'
-                st.info("This session is now complete. Refresh the page to start over.")
+                st.info("This session is now complete. Please close this page.")
             else:
                 st.error("There was an error saving your data. Please try again.")
                 # Show troubleshooting tips
@@ -829,10 +829,3 @@ else:
     with consent_message:
         st.markdown(llm_prompts.intro_and_consent)
         st.button("I accept", key = "consent_button", on_click=markConsent)
-
-# Add this to your sidebar or somewhere accessible
-DEBUG = st.sidebar.checkbox("Debug Mode", value=False)
-
-# In the summariseData function, add this after extracting choices:
-if DEBUG and 'answer_set' in st.session_state:
-    st.sidebar.write("Extracted Answers:", st.session_state['answer_set'])
