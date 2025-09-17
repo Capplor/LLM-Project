@@ -167,16 +167,10 @@ def getData (testing = False ):
         
         #st.text(st.write(response))
 def save_to_google_sheets(package, worksheet_name="Sheet1"):
-    """
-    Save the scenario package to a Google Sheet using a Service Account.
-    Creates the worksheet if it doesn't exist and adds headers if necessary.
-    """
     try:
-        # Get secrets
         gsheets_secrets = st.secrets["connections"]["gsheets"]
         spreadsheet_url = gsheets_secrets["spreadsheet"]
 
-        # Build credentials
         credentials_dict = {
             "type": gsheets_secrets["type"],
             "project_id": gsheets_secrets["project_id"],
@@ -194,6 +188,7 @@ def save_to_google_sheets(package, worksheet_name="Sheet1"):
             "https://www.googleapis.com/auth/spreadsheets",
             "https://www.googleapis.com/auth/drive"
         ]
+
         credentials = Credentials.from_service_account_info(credentials_dict, scopes=scopes)
         gc = gspread.authorize(credentials)
         sh = gc.open_by_url(spreadsheet_url)
@@ -204,30 +199,37 @@ def save_to_google_sheets(package, worksheet_name="Sheet1"):
         except gspread.exceptions.WorksheetNotFound:
             worksheet = sh.add_worksheet(title=worksheet_name, rows=100, cols=20)
 
-        # Prepare row as DataFrame
+        # Extract answers safely
+        answers = package.get("answer set", [])
+        if not isinstance(answers, list):
+            answers = []
+
+        # Prepare row
         new_row = pd.DataFrame([{
-            "participant_number": package['answer set'].get('participant_number', ''),
-            "q1": package['answer set'].get('q1', ''),
-            "q2": package['answer set'].get('q2', ''),
-            "q3": package['answer set'].get('q3', ''),
-            "q4": package['answer set'].get('q4', ''),
-            "q5": package['answer set'].get('q5', ''),
-            "q6": package['answer set'].get('q6', ''),
-            "q7": package['answer set'].get('q7', ''),
-            "scenario_1": package['scenarios_all'].get('col1', ''),
-            "scenario_2": package['scenarios_all'].get('col2', ''),
-            "scenario_3": package['scenarios_all'].get('col3', ''),
-            "final_scenario": package.get('scenario', ''),
-            "preference_feedback": package.get('preference_feedback', '')
+            "participant_number": answers[0] if len(answers) > 0 else "",
+            "q1": answers[1] if len(answers) > 1 else "",
+            "q2": answers[2] if len(answers) > 2 else "",
+            "q3": answers[3] if len(answers) > 3 else "",
+            "q4": answers[4] if len(answers) > 4 else "",
+            "q5": answers[5] if len(answers) > 5 else "",
+            "q6": answers[6] if len(answers) > 6 else "",
+            "q7": answers[8] if len(answers) > 8 else "",   # <-- last one (index 8)
+            "scenario_1": package.get("scenarios_all", {}).get("col1", ""),
+            "scenario_2": package.get("scenarios_all", {}).get("col2", ""),
+            "scenario_3": package.get("scenarios_all", {}).get("col3", ""),
+            "final_scenario": package.get("scenario", ""),
+            "preference_feedback": package.get("preference_feedback", ""),
+            "chat_history": json.dumps(package.get("chat history", []), ensure_ascii=False)
         }])
 
-        # Add headers if missing
+        # Write headers if not present
+        headers = list(new_row.columns)
         existing = worksheet.get_all_values()
-        if not existing:
-            worksheet.insert_row(list(new_row.columns), 1)
+        if not existing or existing[0] != headers:
+            worksheet.insert_row(headers, 1)
 
-        # Append row
-        worksheet.append_row(new_row.iloc[0].tolist())
+        # Append new row
+        worksheet.append_row(new_row.values.tolist()[0])
         st.success("Data saved successfully to Google Sheets!")
 
     except Exception as e:
@@ -655,69 +657,54 @@ def updateFinalScenario (new_scenario):
     st.session_state.scenario_package['scenario'] = new_scenario
     st.session_state.scenario_package['judgment'] = "Ready as is!"
 
-
 def finaliseScenario(package):
     """
     Collects answers, final scenario, and feedback.
     Safely handles missing keys and saves everything to Google Sheets.
     """
     st.header("Review and Submit Your Feedback")
-    
+
     # Show final scenario
     st.subheader("Final Scenario")
     st.write(package.get("scenario", "No scenario generated yet."))
-    
-    # Safely access answers
-    answers = package.get("answer set", {}) or {}
+
+    # Safely access answers (list-based)
+    answers = package.get("answer set", []) or []
 
     st.subheader("Your Answers")
     if answers:
-        for i in range(1, 9):  # Q1 to Q8
-            st.write(f"**Q{i}: {answers.get(f'q{i}', '')}**")
+        # Display Q1–Q6 from indexes 1–6
+        for i in range(1, 7):
+            st.write(f"**Q{i}: {answers[i] if len(answers) > i else ''}**")
+
+        # Q7 comes from index 8
+        st.write(f"**Q7: {answers[8] if len(answers) > 8 else ''}**")
+
     else:
         st.info("No answers collected yet.")
-    
+
     # Feedback input
     feedback_text = st.text_area(
-        "Please share your preference or feedback on this scenario:", 
+        "Please share your preference or feedback on this scenario:",
         key="feedback_text_area"
     )
-    
+
     # Use a form to avoid duplicate button IDs
     with st.form(key="feedback_form"):
         submit_btn = st.form_submit_button("Submit Feedback")
-        
+
         if submit_btn:
             # Update package with feedback
             package["preference_feedback"] = feedback_text
-            
-            # Prepare row as DataFrame
-            new_row = pd.DataFrame([{
-                "participant_number": msg.get("participant_number", ""),
-                "q1": msg.get("q1", ""),
-                "q2": msg.get("q2", ""),
-                "q3": msg.get("q3", ""),
-                "q4": msg.get("q4", ""),
-                "q5": msg.get("q5", ""),
-                "q6": msg.get("q6", ""),
-                "q7": msg.get("q7", ""),
-                "q8": msg.get("q8", ""),
-                "scenario_1": package.get("scenarios_all", {}).get("col1", ""),
-                "scenario_2": package.get("scenarios_all", {}).get("col2", ""),
-                "scenario_3": package.get("scenarios_all", {}).get("col3", ""),
-                "final_scenario": package.get("scenario", ""),
-                "preference_feedback": feedback_text
-            }])
-            
-            # Save to Google Sheets
+
+            # Save to Google Sheets (handles formatting internally)
             try:
-                save_to_google_sheets(new_row)  # make sure this function accepts a DataFrame
+                save_to_google_sheets(package)
                 st.success("Thank you! Your feedback has been submitted.")
-                
-                # Only rerun after successful save
-                st.experimental_rerun()
+                st.rerun()  # replaces deprecated experimental_rerun
             except Exception as e:
                 st.error(f"Failed to save data to Google Sheet: {e}")
+
 
 
 
