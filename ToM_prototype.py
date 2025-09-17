@@ -248,13 +248,6 @@ def save_to_google_sheets(package, worksheet_name="Sheet1"):
 def extractChoices(msgs, testing):
     """
     Uses bespoke LLM prompt to extract answers to given questions from a conversation history into a JSON object.
-
-    Args:
-        msgs: Conversation history; either a Messages object or a dummy variable during testing.
-        testing (bool): If True, uses pre-generated example messages instead of user input.
-
-    Returns:
-        dict: Extracted answers from the conversation.
     """
     # Set up the extraction LLM
     extraction_llm = ChatOpenAI(
@@ -278,15 +271,25 @@ def extractChoices(msgs, testing):
         conversation_text = llm_prompts.example_messages
     else:
         # Convert messages object into a single string
-        # Handles both old-style dicts or Message objects with .content
         conversation_text = "\n".join([
-            getattr(m, "content", str(m)) for m in getattr(msgs, "messages", msgs)
+            f"{m.type}: {m.content}" for m in msgs.messages
         ])
 
     # Call the chain
-    extractedChoices = extractionChain.invoke({"conversation_history": conversation_text})
-
-    return extractedChoices
+    try:
+        extractedChoices = extractionChain.invoke({"conversation_history": conversation_text})
+        
+        # Ensure we have all required keys
+        required_keys = list(range(8))  # 0 for participant ID, 1-7 for questions
+        for key in required_keys:
+            if key not in extractedChoices:
+                extractedChoices[key] = ""
+                
+        return extractedChoices
+    except Exception as e:
+        st.error(f"Error extracting choices: {e}")
+        # Return a default structure if extraction fails
+        return {i: "" for i in range(8)}
 
 
 def collectFeedback(answer, column_id,  scenario):
@@ -468,19 +471,11 @@ def click_selection_yes(button_num, scenario):
     """ Function called on_submit when a final scenario is selected. """
     st.session_state.scenario_selection = button_num
     
-    # Store the selected scenario text
-    if button_num == '1':
-        selected_scenario = st.session_state.response_1['output_scenario']
-    elif button_num == '2':
-        selected_scenario = st.session_state.response_2['output_scenario']
-    else:
-        selected_scenario = st.session_state.response_3['output_scenario']
-    
     # Ensure we have an answer set
     if 'answer_set' not in st.session_state:
         st.session_state['answer_set'] = extractChoices(msgs, False)
     
-    # Create the complete package with proper key names
+    # Create the complete package
     scenario_dict = {
         'col1': st.session_state.response_1['output_scenario'],
         'col2': st.session_state.response_2['output_scenario'],
@@ -488,10 +483,11 @@ def click_selection_yes(button_num, scenario):
     }
     
     st.session_state.scenario_package = {
-        'scenario': selected_scenario,
-        'answer_set': st.session_state['answer_set'],  # Changed from 'answer set' to 'answer_set'
+        'scenario': scenario,
+        'answer_set': st.session_state['answer_set'],
         'judgment': st.session_state.get('scenario_decision', ''),
         'scenarios_all': scenario_dict,
+        'preference_feedback': st.session_state.get('feedback_text', '')
     }
     
     # Move to finalise state
@@ -817,4 +813,11 @@ else:
     with consent_message:
         st.markdown(llm_prompts.intro_and_consent)
         st.button("I accept", key = "consent_button", on_click=markConsent)
+
+# Add this to your sidebar or somewhere accessible
+DEBUG = st.sidebar.checkbox("Debug Mode", value=False)
+
+# In the summariseData function, add this after extracting choices:
+if DEBUG:
+    st.sidebar.write("Extracted Answers:", st.session_state['answer_set'])
            
