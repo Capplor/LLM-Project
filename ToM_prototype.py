@@ -120,19 +120,15 @@ def getData (testing = False ):
     """
 
     ## if this is the first run, set up the intro 
-    if len(msgs.messages) == 0:
+       if len(msgs.messages) == 0:
         msgs.add_ai_message(llm_prompts.questions_intro)
 
     # Extract participant ID from the first human message
     if 'participant_id' not in st.session_state:
         for msg in msgs.messages:
             if msg.type == "human" and not st.session_state.get('participant_id'):
-                # Check if this is likely the participant ID (not a response to a question)
-                if "participant" in msg.content.lower() or "id" in msg.content.lower():
-                    st.session_state['participant_id'] = msg.content
-                else:
-                    # If it's not clearly a participant ID, assume it's the first answer
-                    st.session_state['participant_id'] = "Unknown"
+                # Store the first human message as participant ID
+                st.session_state['participant_id'] = msg.content.strip()
                 break
 
    # as Streamlit refreshes page after each input, we have to refresh all messages. 
@@ -212,7 +208,7 @@ def save_to_google_sheets(package, worksheet_name="Sheet1"):
         except gspread.exceptions.WorksheetNotFound:
             worksheet = sh.add_worksheet(title=worksheet_name, rows=100, cols=20)
         
-        # Prepare the row data - map descriptive keys to numerical indices
+        # Prepare the row data
         answers = package.get("answer_set", {})
         new_row = [
             answers.get("participant_id", ""),  # participant number
@@ -255,6 +251,7 @@ def save_to_google_sheets(package, worksheet_name="Sheet1"):
         elif "permission" in str(e).lower():
             st.info("Please check if the service account has permission to access the Google Sheet.")
         return False
+        
 
 def extractChoices(msgs, testing):
     """
@@ -299,7 +296,7 @@ def extractChoices(msgs, testing):
         st.error(f"Error extracting choices: {e}")
         # Return a default structure if extraction fails
         return {
-            "participant_id": "",
+            "participant_id": st.session_state.get('participant_id', ''),
             "what": "",
             "context": "",
             "procedure": "",
@@ -308,7 +305,6 @@ def extractChoices(msgs, testing):
             "similarity": "",
             "social_perception": ""
         }
-
 
 
 def collectFeedback(answer, column_id,  scenario):
