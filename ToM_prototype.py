@@ -525,130 +525,77 @@ def scenario_selection (popover, button_num, scenario):
 
 
 
-def reviewData(testing):
-    """ Procedure that governs the scenario review and selection by the user. 
-
-    It presents the scenarios generated in previous phases (and saved to st.session_state) and sets up the feedback / selection buttons and popovers. 
+def reviewData(testing=False):
+    """ Procedure that governs the scenario review and selection by the user.
+        It presents the generated scenarios and sets up feedback/selection buttons.
     """
 
-    ## If we're testing this function, the previous functions have set up the three column structure yet and we don't have scenarios. 
-    ## --> we will set these up now. 
+    # --- Ensure session state keys exist ---
+    for key in [
+        'scenario_selection', 
+        'response_1', 'response_2', 'response_3',
+        'run_id', 'scenario_package'
+    ]:
+        if key not in st.session_state:
+            st.session_state[key] = None
+
+    # If testing, set up dummy scenarios
     if testing:
-        testing_reviewSetUp() 
+        testing_reviewSetUp()
 
-
-    ## if this is the first time running, let's make sure that the scenario selection variable is ready. 
-    if 'scenario_selection' not in st.session_state:
+    # Initialize scenario selection if first run
+    if st.session_state['scenario_selection'] is None:
         st.session_state['scenario_selection'] = '0'
 
-    ## assuming no scenario has been selected 
+    # If no scenario selected yet
     if st.session_state['scenario_selection'] == '0':
-        # setting up space for the scenarios 
         col1, col2, col3 = st.columns(3)
-        
-        ## check if we had any feedback before:
-        ## set up a dictionary:
-        disable = {
-            'col1_fb': None,
-            'col2_fb': None,
-            'col3_fb': None,
-        }
-        ## grab any answers we already have:
-        for col in ['col1_fb','col2_fb','col3_fb']:
-            if col in st.session_state and st.session_state[col] is not None:
-                
-                if DEBUG: 
-                    st.write(col)
-                    st.write("Feeedback 1:", st.session_state[col]['score'])
-                
-                # update the corresponding entry in the disable dict
-                disable[col] = st.session_state[col]['score']
 
-        # now set up the columns with each scenario & feedback functions
-        with col1: 
-            st.header("Scenario 1") 
-            st.write(st.session_state.response_1['output_scenario'])
-            col1_fb = streamlit_feedback(
+        # Track any existing feedback to disable resubmission
+        disable = {f'col{i}_fb': None for i in range(1, 4)}
+        for col in disable.keys():
+            if col in st.session_state and st.session_state[col] is not None:
+                disable[col] = st.session_state[col].get('score')
+
+        # --- Display scenarios with feedback ---
+        for idx, col in enumerate([col1, col2, col3], start=1):
+            st.header(f"Scenario {idx}")
+            response_key = f'response_{idx}'
+            scenario_text = (st.session_state.get(response_key) or {}).get('output_scenario', "No scenario generated.")
+            st.write(scenario_text)
+            streamlit_feedback(
                 feedback_type="thumbs",
                 optional_text_label="[Optional] Please provide an explanation",
                 align='center',
-                key="col1_fb",
-                # this ensures that feedback cannot be submitted twice 
-                disable_with_score = disable['col1_fb'],
-                on_submit = collectFeedback,
-                args = ('col1',
-                        st.session_state.response_1['output_scenario']
-                        )
+                key=f"col{idx}_fb",
+                disable_with_score=disable[f'col{idx}_fb'],
+                on_submit=collectFeedback,
+                args=(f'col{idx}', scenario_text)
             )
 
-        with col2: 
-            st.header("Scenario 2") 
-            st.write(st.session_state.response_2['output_scenario'])
-            col2_fb = streamlit_feedback(
-                feedback_type="thumbs",
-                optional_text_label="[Optional] Please provide an explanation",
-                align='center',
-                key="col2_fb",
-                # this ensures that feedback cannot be submitted twice 
-                disable_with_score = disable['col2_fb'],            
-                on_submit = collectFeedback,
-                args = ('col2', 
-                        st.session_state.response_2['output_scenario']
-                        )
-            )        
-        
-        with col3: 
-            st.header("Scenario 3") 
-            st.write(st.session_state.response_3['output_scenario'])
-            col3_fb = streamlit_feedback(
-                feedback_type="thumbs",
-                optional_text_label="[Optional] Please provide an explanation",
-                align='center',
-                key="col3_fb",
-                # this ensures that feedback cannot be submitted twice 
-                disable_with_score = disable['col3_fb'],            
-                on_submit = collectFeedback,
-                args = ('col3', 
-                        st.session_state.response_3['output_scenario']
-                        )
-            )   
-
-
-        ## now we should have col1, col2, col3 with text available -- let's set up the infrastructure for selection. 
+        # Instructions for user
         st.divider()
+        st.chat_message("ai").write(
+            "Please rate the scenarios above using 👍 or 👎, add optional comments, "
+            "and then pick the one you like most to continue."
+        )
 
-        if DEBUG:
-            st.write("run ID", st.session_state['run_id'])
-            if 'temp_debug' not in st.session_state:
-                st.write("no debug found")
-            else:
-                st.write("debug feedback", st.session_state.temp_debug)
-        
+        # Popover buttons for scenario selection
+        b1, b2, b3 = st.columns(3)
+        scenario_selection(b1.popover('Pick scenario 1', use_container_width=True), '1', st.session_state.response_1['output_scenario'])
+        scenario_selection(b2.popover('Pick scenario 2', use_container_width=True), '2', st.session_state.response_2['output_scenario'])
+        scenario_selection(b3.popover('Pick scenario 3', use_container_width=True), '3', st.session_state.response_3['output_scenario'])
 
-
-        ## if we haven't selected scenario, let's give them a choice. 
-        st.chat_message("ai").write("Please have a look at the scenarios above. Use the 👍 and 👎  to leave a rating and short comment on each of the scenarios. Then pick the one that you like the most to continue. ")
-     
-        b1,b2,b3 = st.columns(3)
-        # set up the popover buttons 
-        p1 = b1.popover('Pick scenario 1', use_container_width=True)
-        p2 = b2.popover('Pick scenario 2', use_container_width=True)
-        p3 = b3.popover('Pick scenario 3', use_container_width=True)
-
-        # and now initialise them properly
-        scenario_selection(p1,'1', st.session_state.response_1['output_scenario']) 
-        scenario_selection(p2,'2',st.session_state.response_2['output_scenario']) 
-        scenario_selection(p3,'3',st.session_state.response_3['output_scenario']) 
-    
-    
-    ## and finally, assuming we have selected a scenario, let's move into the final state!  Note that we ensured that the screen is free for any new content now as people had to click to select a scenario -- streamlit is starting with a fresh page 
+    # If scenario has been selected, move to finalise
     else:
-        # great, we have a scenario selected, and all the key information is now in st.session_state['scenario_package'], created in the def click_selection_yes(button_num, scenario):
+        if 'scenario_package' not in st.session_state or st.session_state['scenario_package'] is None:
+            st.error("No scenario package found! Cannot proceed to finalise.")
+            return
 
-        # set the flow pointer accordingly 
         st.session_state['agentState'] = 'finalise'
-        # print("ended loop -- should move to finalise!")
-        finaliseScenario()
+        # Call finaliseScenario with the selected package
+        finaliseScenario(st.session_state['scenario_package'])
+
 
 
 def updateFinalScenario (new_scenario):
