@@ -212,17 +212,17 @@ def save_to_google_sheets(package, worksheet_name="Sheet1"):
         except gspread.exceptions.WorksheetNotFound:
             worksheet = sh.add_worksheet(title=worksheet_name, rows=100, cols=20)
         
-        # Prepare the row data
+        # Prepare the row data - map descriptive keys to numerical indices
         answers = package.get("answer_set", {})
         new_row = [
-            answers.get(0, ""),  # participant number
-            answers.get(1, ""),  # Q1
-            answers.get(2, ""),  # Q2
-            answers.get(3, ""),  # Q3
-            answers.get(4, ""),  # Q4
-            answers.get(5, ""),  # Q5
-            answers.get(6, ""),  # Q6
-            answers.get(7, ""),  # Q7
+            answers.get("participant_id", ""),  # participant number
+            answers.get("what", ""),  # Q1
+            answers.get("context", ""),  # Q2
+            answers.get("procedure", ""),  # Q3
+            answers.get("understanding", ""),  # Q4
+            answers.get("categorical_vs_continuous", ""),  # Q5
+            answers.get("similarity", ""),  # Q6
+            answers.get("social_perception", ""),  # Q7
             package.get("scenarios_all", {}).get("col1", ""),
             package.get("scenarios_all", {}).get("col2", ""),
             package.get("scenarios_all", {}).get("col3", ""),
@@ -290,37 +290,25 @@ def extractChoices(msgs, testing):
         # Call the chain
         extractedChoices = extractionChain.invoke({"conversation_history": conversation_text})
         
-        # Map the descriptive keys to numerical indices
-        key_mapping = {
-            "what": 1,  # Q1: Recall a time when you misunderstood...
-            "context": 2,  # Q2: Why did you assume something?
-            "procedure": 3,  # Q3: How did this episode change your beliefs?
-            "understanding": 4,  # Q4: Keeping this situation in mind...
-            "categorical_vs_continuous": 5,  # Q5: Moving beyond this situation...
-            "similarity": 6,  # Q6: Do you think it is easier...
-            "social_perception": 7,  # Q7: Do you think physical characteristics...
-        }
+        # Add participant ID to the extracted choices
+        extractedChoices["participant_id"] = st.session_state.get('participant_id', '')
         
-        # Create a new dictionary with numerical indices
-        participant_id = st.session_state.get('participant_id', '')
-        mapped_answers = {0: participant_id}  # Use the actual participant ID
-        
-        # Map the extracted answers to numerical indices
-        for key, value in extractedChoices.items():
-            if key in key_mapping:
-                mapped_answers[key_mapping[key]] = value
-        
-        # Ensure all indices from 0 to 7 are present
-        for i in range(8):
-            if i not in mapped_answers:
-                mapped_answers[i] = ""
-        
-        return mapped_answers
+        return extractedChoices
         
     except Exception as e:
         st.error(f"Error extracting choices: {e}")
         # Return a default structure if extraction fails
-        return {i: "" for i in range(8)}
+        return {
+            "participant_id": "",
+            "what": "",
+            "context": "",
+            "procedure": "",
+            "understanding": "",
+            "categorical_vs_continuous": "",
+            "similarity": "",
+            "social_perception": ""
+        }
+
 
 
 def collectFeedback(answer, column_id,  scenario):
@@ -380,14 +368,9 @@ def collectFeedback(answer, column_id,  scenario):
 
 
 @traceable # Auto-trace this function
+@traceable # Auto-trace this function
 def summariseData(testing = False): 
-    """Takes the extracted answers to questions and generates three scenarios, based on selected prompts. 
-
-    testing (bool): will insert a dummy data instead of user-generated content if set to True
-
-    """
-
-
+    """Takes the extracted answers to questions and generates three scenarios, based on selected prompts. """
     # start by setting up the langchain chain from our template (defined in lc_prompts.py)
     prompt_template = PromptTemplate.from_template(llm_prompts.main_prompt_template)
 
@@ -412,7 +395,6 @@ def summariseData(testing = False):
     # store the generated answers into streamlit session state
     st.session_state['answer_set'] = answer_set
 
-
     # let the user know the bot is starting to generate content 
     with entry_messages:
         if testing:
@@ -421,14 +403,13 @@ def summariseData(testing = False):
         st.divider()
         st.chat_message("ai").write("Seems I have everything! Let me try to summarise what you said in three scenarios. \n See you if you like any of these! ")
 
-
         ## can't be bothered to set up LLM stream here, so just showing progress bar for now  
         ## this gets manually updated after each scenario
         progress_text = 'Processing your scenarios'
         bar = st.progress(0, text = progress_text)
 
-    # Arrange answers into dictionary
-    summary_answers = {key: answer_set[key] for key in llm_prompts.summary_keys}
+    # Arrange answers into dictionary - use the descriptive keys
+    summary_answers = {key: answer_set.get(key, "") for key in llm_prompts.summary_keys}
 
     # create first scenario & store into st.session state 
     st.session_state.response_1 = chain.invoke({
@@ -476,6 +457,7 @@ def summariseData(testing = False):
 
     # we need the user to do an action (e.g., button click) to generate a natural streamlit refresh (so we can show scenarios on a clear page). Other options like streamlit rerun() have been marked as 'failed runs' on Langsmith which is annoying. 
     st.button("I'm ready -- show me!", key = 'progressButton')
+
 
 
 def testing_reviewSetUp():
