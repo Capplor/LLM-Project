@@ -607,44 +607,6 @@ def updateFinalScenario (new_scenario):
     st.session_state.scenario_package['judgment'] = "Ready as is!"
 
 
-def save_to_google_sheets(package, worksheet_name="Sheet1"):
-    """
-    Saves the scenario package to Google Sheets using Streamlit GSheetsConnection.
-    Ensures one-to-one mapping between answer keys and sheet columns.
-    """
-    try:
-        conn = st.connection("gsheets", type=GSheetsConnection)
-        df = conn.read()
-
-        answers = package.get("answer set", {})
-
-        new_row = {
-            "participant_number": answers.get("participant_number", ""),
-            "q1": answers.get("q1", ""),
-            "q2": answers.get("q2", ""),
-            "q3": answers.get("q3", ""),
-            "q4": answers.get("q4", ""),
-            "q5": answers.get("q5", ""),
-            "q6": answers.get("q6", ""),
-            "q7": answers.get("q7", ""),
-            "sum1": package.get("scenarios_all", {}).get("col1", ""),
-            "sum2": package.get("scenarios_all", {}).get("col2", ""),
-            "sum3": package.get("scenarios_all", {}).get("col3", ""),
-            "selected": package.get("scenario", ""),
-            "feedback": package.get("preference_feedback", "")
-        }
-
-        # If sheet is empty, create headers
-        if df.empty:
-            df = pd.DataFrame([new_row])
-        else:
-            df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-
-        conn.update(data=df)
-        st.success("Data saved successfully to Google Sheets!")
-
-    except Exception as e:
-        st.error(f"Failed to save data to Google Sheet: {e}")
 
 
 def finaliseScenario(package):
@@ -820,10 +782,3 @@ else:
         st.markdown(llm_prompts.intro_and_consent)
         st.button("I accept", key = "consent_button", on_click=markConsent)
            
-
-
-
-           
-
-
-
