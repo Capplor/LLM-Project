@@ -120,7 +120,7 @@ def getData (testing = False ):
     """
 
     ## if this is the first run, set up the intro 
-       if len(msgs.messages) == 0:
+    if len(msgs.messages) == 0:
         msgs.add_ai_message(llm_prompts.questions_intro)
 
     # Extract participant ID from the first human message
