@@ -661,33 +661,19 @@ def finaliseScenario(package):
     """
     st.header("Review and Submit Your Feedback")
     
-    # Create two columns for layout
-    col1, col2 = st.columns([2, 1])
+    # Show final scenario (removed the two-column layout)
+    st.subheader("Final Scenario")
+    scenario_text = st.text_area(
+        "Edit your final scenario if needed:",
+        value=package.get("scenario", "No scenario generated yet."),
+        height=200,
+        key="final_scenario_editor"
+    )
     
-    with col1:
-        # Show final scenario
-        st.subheader("Final Scenario")
-        scenario_text = st.text_area(
-            "Edit your final scenario if needed:",
-            value=package.get("scenario", "No scenario generated yet."),
-            height=200,
-            key="final_scenario_editor"
-        )
-        
-        # Update the scenario if edited
-        if scenario_text != package.get("scenario", ""):
-            package["scenario"] = scenario_text
-            st.session_state.scenario_package = package
-    
-    with col2:
-        # Display answers
-        st.subheader("Your Answers")
-        answers = package.get("answer_set", {})
-        if answers:
-            for i in range(1, 8):  # Q1–Q7
-                st.write(f"**Q{i}:** {answers.get(i, '')}")
-        else:
-            st.info("No answers collected yet.")
+    # Update the scenario if edited
+    if scenario_text != package.get("scenario", ""):
+        package["scenario"] = scenario_text
+        st.session_state.scenario_package = package
     
     # Feedback input
     st.divider()
@@ -703,17 +689,26 @@ def finaliseScenario(package):
     st.session_state['feedback_text'] = feedback_text
     package["preference_feedback"] = feedback_text
     
-    # Submit button
-    if st.button("Submit All Feedback", type="primary"):
-        if save_to_google_sheets(package):
-            st.success("Thank you! Your feedback has been submitted.")
-            st.balloons()
-            
-            # Reset the app after a delay
-            st.session_state['agentState'] = 'completed'
-            st.info("This session is now complete. Refresh the page to start over.")
-        else:
-            st.error("There was an error saving your data. Please try again.")
+    # Submit button with loading state
+    if st.button("Submit All Feedback", type="primary", key="submit_feedback"):
+        with st.spinner("Saving your data..."):
+            if save_to_google_sheets(package):
+                st.success("Thank you! Your feedback has been submitted.")
+                st.balloons()
+                
+                # Reset the app after a delay
+                st.session_state['agentState'] = 'completed'
+                st.info("This session is now complete. Refresh the page to start over.")
+            else:
+                st.error("There was an error saving your data. Please try again.")
+                # Show troubleshooting tips
+                st.info("""
+                **Troubleshooting tips:**
+                1. Check your internet connection
+                2. Make sure the Google Sheet exists and is accessible
+                3. Try refreshing the page and submitting again
+                """)
+
 
 
 def stateAgent():
