@@ -168,9 +168,6 @@ def getData (testing = False ):
         
         #st.text(st.write(response))
 def save_to_google_sheets(package, worksheet_name="Sheet1"):
-    import gspread
-    from google.oauth2.service_account import Credentials
-
     try:
         gsheets_secrets = st.secrets["connections"]["gsheets"]
         spreadsheet_url = gsheets_secrets["spreadsheet"]
@@ -204,19 +201,17 @@ def save_to_google_sheets(package, worksheet_name="Sheet1"):
             worksheet = sh.add_worksheet(title=worksheet_name, rows=100, cols=20)
 
         # Extract answers safely
-        answers = package.get("answer set", {}) or {}
+        answers_list = package.get("answer set", [])
+        if not isinstance(answers_list, list):
+            answers_list = []
 
-        # Prepare row as a list/dict
+        # Map answers list to q1–q7
+        answer_dict = {f"q{i+1}": answers_list[i] if i < len(answers_list) else "" for i in range(7)}
+
+        # Prepare row
         new_row = pd.DataFrame([{
-            "participant_number": answers.get("participant_number", ""),
-            "q1": answers.get("q1", ""),
-            "q2": answers.get("q2", ""),
-            "q3": answers.get("q3", ""),
-            "q4": answers.get("q4", ""),
-            "q5": answers.get("q5", ""),
-            "q6": answers.get("q6", ""),
-            "q7": answers.get("q7", ""),
-            "q8": answers.get("q8", ""),
+            "participant_number": package.get("participant_number", ""),
+            **answer_dict,
             "scenario_1": package.get("scenarios_all", {}).get("col1", ""),
             "scenario_2": package.get("scenarios_all", {}).get("col2", ""),
             "scenario_3": package.get("scenarios_all", {}).get("col3", ""),
@@ -233,6 +228,7 @@ def save_to_google_sheets(package, worksheet_name="Sheet1"):
 
         # Append new row
         worksheet.append_row(new_row.values.tolist()[0])
+        st.success("Data saved successfully to Google Sheets!")
 
     except Exception as e:
         st.error(f"Failed to save data to Google Sheet: {e}")
@@ -685,12 +681,12 @@ def finaliseScenario(package):
     st.write(package.get("scenario", "No scenario generated yet."))
     
     # Safely access answers
-    answers = package.get("answer set", {}) or {}
+    answers = package.get("answer set", []) or []
 
     st.subheader("Your Answers")
     if answers:
-        for i in range(1, 9):  # Q1 to Q8
-            st.write(f"**Q{i}: {answers.get(f'q{i}', '')}**")
+        for i in range(7):  # Q1 to Q7
+            st.write(f"**Q{i+1}: {answers[i] if i < len(answers) else ''}**")
     else:
         st.info("No answers collected yet.")
     
@@ -708,13 +704,13 @@ def finaliseScenario(package):
             # Update package with feedback
             package["preference_feedback"] = feedback_text
             
-            # Save to Google Sheets
-            try:
-                save_to_google_sheets(package)  # package now includes answers
-                st.success("Thank you! Your feedback has been submitted.")
-                
-            except Exception as e:
-                st.error(f"Failed to save data to Google Sheet: {e}")
+            # Save everything to Google Sheets
+            save_to_google_sheets(package)
+            
+            st.success("Thank you! Your feedback has been submitted.")
+            
+            # Refresh the page to clear form (Streamlit 1.49+)
+            st.experimental_rerun()
 
 
 
