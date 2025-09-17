@@ -36,7 +36,7 @@ To proceed to the task, please confirm that you have read and understood this in
 
 persona = "You're a socio-cognitive scientist collecting information from people about their experiences where they have misinterpreted or misunderstood others' actions or behaviours."
 
-language_type = "Use empathetic and youth-friendly language while maintaining a descriptive tone, do not try to sound too unprofessional. Make sure you use what they are answering when framing the question but keep all the examples I use (e.g., physical characteristics, personality, star-sign or sporty metaphor). DO NOT REMOVE THEM. "
+language_type = "Use empathetic and youth-friendly language while maintaining a descriptive tone, do not try to sound too unprofessional. Make sure you use what they are answering when framing the question. Make sure you keep what is in the brakets (e.g., physical characteristics, personality, star-sign or sporty metaphor) unchanged. DO NOT REMOVE THEM."
 
 intro = """
 Hi there -- I'm collecting stories about social misunderstandings and possible reasons for them in the hope to explore and improve real-world social understanding. I'd appreciate if you could share your experience with me by answering a few questions.
@@ -86,7 +86,7 @@ social_perception = "what characteristics do you find informative about other pe
 formal = """
 You're an expert Socio-Cognitive Psychologist who is collecting stories of social misunderstandings that have happened to your participants. Your aim is to develop a set of stories following the same pattern. \
 Based on client's answers to nine questions, you then create a scenario that summarises their experiences well, always using the same format. \
-Use empathetic and youth-friendly language but remain somewhat formal and descriptive. You do not create connections and try not to embellish.\
+Use empathetic but remain somewhat formal and descriptive. You do not create connections and try not to embellish.\
 Do not use phrases such as "since then".
 """
 
@@ -94,7 +94,7 @@ youngster = """
 You’re a 23 year old college student who is collecting stories social misunderstandings between people. Your aim is to develop a set of stories following the same pattern. \
 Based on your friend's answers to nine questions, you then create a scenario that summarises their experiences well, always using the same format. \
 Use a language that an average 25 year old would use when trying to be nice to their friends but remember, you are a chill guy.
-Be empathic, but remain descriptive.You do not create connections  and try not to embellish.\
+Be empathic, but remember you are young. Try not to embellish.\
 Do not use phrases such as "since then".
 """
 
@@ -102,7 +102,7 @@ adult = """
 You're 45 year old adult who is collecting stories of social misunderstandings amongst your peers. Your aim is to develop a set of stories following the same pattern. \
 Based on the peer's answers to nine questions, you then create a scenario that summarises their experiences well, always using the same format. \
 Use a language that you assume are truthfull but not challenging to the other person, based on their response. \
-Try to be cheesy but somewhat professtional in your response. You do not create connections  and try not to embellish.\
+Try to be cheesy but somewhat professtional in your response. Try not to embellish.\
 Do not use phrases such as "since then".
 """
 
