@@ -165,9 +165,11 @@ def getData (testing = False ):
         #st.text(st.write(response))
 def save_to_google_sheets(package, worksheet_name="Sheet1"):
     """
-    Save answers, scenarios, final scenario, and feedback to Google Sheets.
+    Saves answers, scenarios, final scenario, and feedback to Google Sheets.
+    Maps internal answer set (indices) to proper headers.
     """
     try:
+
         gsheets_secrets = st.secrets["connections"]["gsheets"]
         spreadsheet_url = gsheets_secrets["spreadsheet"]
 
@@ -188,12 +190,10 @@ def save_to_google_sheets(package, worksheet_name="Sheet1"):
             "https://www.googleapis.com/auth/spreadsheets",
             "https://www.googleapis.com/auth/drive"
         ]
-
         credentials = Credentials.from_service_account_info(credentials_dict, scopes=scopes)
         gc = gspread.authorize(credentials)
         sh = gc.open_by_url(spreadsheet_url)
 
-        # Get or create worksheet
         try:
             worksheet = sh.worksheet(worksheet_name)
         except gspread.exceptions.WorksheetNotFound:
@@ -202,14 +202,14 @@ def save_to_google_sheets(package, worksheet_name="Sheet1"):
         answers = package.get("answer set", {})
 
         new_row = [
-            package.get("participant_number", ""),
-            answers.get("q1", ""),
-            answers.get("q2", ""),
-            answers.get("q3", ""),
-            answers.get("q4", ""),
-            answers.get("q5", ""),
-            answers.get("q6", ""),
-            answers.get("q7", ""),
+            answers.get(0, ""),  # participant number
+            answers.get(1, ""),  # Q1
+            answers.get(2, ""),  # Q2
+            answers.get(3, ""),  # Q3
+            answers.get(4, ""),  # Q4
+            answers.get(5, ""),  # Q5
+            answers.get(6, ""),  # Q6
+            answers.get(7, ""),  # Q7
             package.get("scenarios_all", {}).get("col1", ""),
             package.get("scenarios_all", {}).get("col2", ""),
             package.get("scenarios_all", {}).get("col3", ""),
@@ -217,17 +217,17 @@ def save_to_google_sheets(package, worksheet_name="Sheet1"):
             package.get("preference_feedback", "")
         ]
 
-        # Write headers if not present
         headers = [
             "participant_number", "q1", "q2", "q3", "q4", "q5", "q6", "q7",
             "scenario_1", "scenario_2", "scenario_3", "final_scenario", "preference_feedback"
         ]
+
         existing = worksheet.get_all_values()
         if not existing or existing[0] != headers:
             worksheet.insert_row(headers, 1)
 
-        # Append new row
         worksheet.append_row(new_row)
+
         st.success("Data saved successfully to Google Sheets!")
 
     except Exception as e:
@@ -670,79 +670,73 @@ def updateFinalScenario (new_scenario):
 
 def finaliseScenario(package):
     """
-    Collects answers, final scenario, and feedback.
-    Safely handles missing keys and saves everything to Google Sheets.
+    Displays final scenario, answers, and collects feedback.
+    Saves everything to Google Sheets when submitted.
     """
     st.header("Review and Submit Your Feedback")
-    
+
     # Show final scenario
     st.subheader("Final Scenario")
     st.write(package.get("scenario", "No scenario generated yet."))
-    
-    # Safely access answers
-    answers = package.get("answer set", {}) or {}
 
+    # Display answers
     st.subheader("Your Answers")
+    answers = package.get("answer set", {})
     if answers:
-        for i in range(1, 8):  # Q1 to Q7
-            st.write(f"**Q{i}: {answers.get(f'q{i}', '')}**")
+        for i in range(1, 8):  # Q1–Q7 (participant number is index 0)
+            st.write(f"**Q{i}: {answers.get(i, '')}**")
     else:
         st.info("No answers collected yet.")
-    
+
     # Feedback input
     feedback_text = st.text_area(
-        "Please share your preference or feedback on this scenario:", 
+        "Please share your preference or feedback on this scenario:",
         key="feedback_text_area"
     )
-    
-    # Use a form to avoid duplicate button IDs
+    st.session_state['feedback_text'] = feedback_text  # store for state persistence
+
+    # Use a form for submission
     with st.form(key="feedback_form"):
         submit_btn = st.form_submit_button("Submit Feedback")
-        
+
         if submit_btn:
-            # Update package with feedback
             package["preference_feedback"] = feedback_text
-            
-            # Save to Google Sheets
             save_to_google_sheets(package)
             st.success("Thank you! Your feedback has been submitted.")
-            
-            # Refresh the page to move forward
-            st.experimental_rerun()
+            st.experimental_rerun()  # or replace with newer Streamlit flow control
 
 
-
-def stateAgent(): 
+def stateAgent():
     """
-    Main flow function of the interaction.
-    Keeps track of the system state and calls the appropriate procedure on each Streamlit refresh.
+    Main flow of the app. Routes between states: start, summarise, review, finalise.
     """
     testing = False
 
-    if testing:
-        print("Running stateAgent loop -- session state: ", st.session_state['agentState'])
-         package = {
-             "participant_number": st.session_state.get("participant_number", ""),
-            "answer set": {f"q{i+1}": st.session_state['summary_answers'].get(f"q{i+1}", "") for i in range(7)},
-             "scenarios_all": {
+    # Only create package when needed (finalise)
+    package = None
+
+    if st.session_state['agentState'] == 'start':
+        getData(testing)
+
+    elif st.session_state['agentState'] == 'summarise':
+        summariseData(testing)
+
+    elif st.session_state['agentState'] == 'review':
+        reviewData(testing)
+
+    elif st.session_state['agentState'] == 'finalise':
+        # Build the package using raw answer set from session state
+        package = {
+            "answer set": st.session_state.get("summary_answers", {}),  # all answers including participant number
+            "scenarios_all": {
                 "col1": st.session_state.response_1['output_scenario'],
                 "col2": st.session_state.response_2['output_scenario'],
                 "col3": st.session_state.response_3['output_scenario']
-                 },
-             "scenario": st.session_state.get("selected_scenario_text", ""),
-             "preference_feedback": ""
-             }
-
-    # Main loop -- selecting the right 'agent' each time
-    if st.session_state['agentState'] == 'start':
-        getData(testing)
-    elif st.session_state['agentState'] == 'summarise':
-        summariseData(testing)
-    elif st.session_state['agentState'] == 'review':
-        reviewData(testing)
-    elif st.session_state['agentState'] == 'finalise':
+            },
+            "scenario": st.session_state.get("selected_scenario_text", ""),
+            "preference_feedback": st.session_state.get("feedback_text", "")
+        }
         finaliseScenario(package)
-
 
 
 def markConsent():
