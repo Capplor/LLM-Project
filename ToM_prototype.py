@@ -561,11 +561,14 @@ def reviewData(testing=False):
     if st.session_state['scenario_selection'] == '0':
         col1, col2, col3 = st.columns(3)
 
-        disable = {
-            'col1_fb': st.session_state.get('col1_fb', {}).get('score'),
-            'col2_fb': st.session_state.get('col2_fb', {}).get('score'),
-            'col3_fb': st.session_state.get('col3_fb', {}).get('score'),
-        }
+        # Fix the disable dictionary creation
+        disable = {}
+        for col in ['col1_fb', 'col2_fb', 'col3_fb']:
+            feedback_data = st.session_state.get(col)
+            if isinstance(feedback_data, dict) and 'score' in feedback_data:
+                disable[col] = feedback_data.get('score')
+            else:
+                disable[col] = None
 
         # Scenario 1
         with col1:
@@ -631,8 +634,6 @@ def reviewData(testing=False):
             st.session_state['selected_scenario_text'] = st.session_state.response_3['output_scenario']
 
         st.session_state['agentState'] = 'finalise'
-
-
 
 
 def updateFinalScenario (new_scenario):
