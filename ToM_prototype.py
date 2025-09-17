@@ -231,35 +231,46 @@ def save_to_google_sheets(package, worksheet_name="Sheet1"):
 
 
 def extractChoices(msgs, testing):
-    """Extract answers to questions from conversation history, skipping the intro."""
-    
+    """
+    Uses bespoke LLM prompt to extract answers to given questions from a conversation history into a JSON object.
+
+    Args:
+        msgs: Conversation history; either a Messages object or a dummy variable during testing.
+        testing (bool): If True, uses pre-generated example messages instead of user input.
+
+    Returns:
+        dict: Extracted answers from the conversation.
+    """
+    # Set up the extraction LLM
     extraction_llm = ChatOpenAI(
-        temperature=0.1,
-        model=st.session_state.llm_model,
+        temperature=0.1, 
+        model=st.session_state.llm_model, 
         openai_api_key=openai_api_key
     )
-    
+
+    # Prompt template
     extraction_template = PromptTemplate(
-        input_variables=["conversation_history"], 
+        input_variables=["conversation_history"],
         template=llm_prompts.extraction_prompt_template
     )
-    
+
+    # JSON parser
     json_parser = SimpleJsonOutputParser()
     extractionChain = extraction_template | extraction_llm | json_parser
-    
-    # Prepare conversation history
+
+    # Prepare conversation text
     if testing:
-        conversation_history = llm_prompts.example_messages
+        conversation_text = llm_prompts.example_messages
     else:
-        # Skip the first message (intro from the AI)
-        conversation_history = msgs.messages[1:] if len(msgs.messages) > 1 else msgs.messages
-    
-    # Combine the messages into a single string (or however your prompt expects it)
-    conversation_text = "\n".join([m["content"] for m in conversation_history])
-    
-    # Invoke the extraction chain
+        # Convert messages object into a single string
+        # Handles both old-style dicts or Message objects with .content
+        conversation_text = "\n".join([
+            getattr(m, "content", str(m)) for m in getattr(msgs, "messages", msgs)
+        ])
+
+    # Call the chain
     extractedChoices = extractionChain.invoke({"conversation_history": conversation_text})
-    
+
     return extractedChoices
 
 
