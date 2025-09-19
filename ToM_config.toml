@@ -22,6 +22,7 @@ In this task you’re going to engage with a chatbot that asks you to go through
 For example, believing that someone was mean to you when they were actually trying to be funny or expecting they would skip the line for an attraction but actually respecting the queue. \ 
 We would like you to think through the situation and more generally how you you reached the wrong conclusion and what happened afterwards. \
 Please answer the questions from your own perspective and without thinking whether what you are writing is right or wrong, as there is no correct answer in this interview. \
+*Remember you can always ask for clarifications on a question if you are unsure of the meaning*. \
 You can refer to *general* experiences or situations that have happened to you but please do not share any personal data, such as names or age. \
 
 **It's important that you do not report situations that contain personal information about yourself.**
@@ -49,7 +50,7 @@ questions = [
     "Why did you assume something? Were you surprised when they behaved differently?",
     "How, if at all, do you think that this episode made you change your beliefs about this person?",
     "Did you think this person had motivations, intentions, hidden aims or emotions behind what happened (e.g., they behaved like this because they were upset or because they wanted to make you change your mind)?",
-    "In general, to what extent do you think emotions, motivations, aims, and intentions are alike, and in what ways are they different? Could you expand on your reasoning?"
+    "In general, to what extent do you think emotions, motivations, aims, and intentions are alike, and in what ways are they different? Could you expand on your reasoning?",
     "Going back to the situation you described, did you think about certain characteristics of this person (e.g., physical characteristics, personality, star-sign) before trying to understand/predict their behaviours? If yes, which ones?",
     "Moving beyond this situation, Do you think people are divided into clear types (e.g. sporty vs not sporty), can be seen on a scale (e.g. somewhere in between not very sporty and very sporty), or a mix of these? Can you give an example?",
     "Do you think it is easier to understand people who are similar to you? Why?",
