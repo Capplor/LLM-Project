@@ -704,18 +704,29 @@ def finaliseScenario(package):
                 st.success("Thank you! Your feedback has been submitted.")
                 st.balloons()
                 
-                # Reset the app after a delay
+                # Get the secret URL from Streamlit secrets
+                redirect_url = st.secrets.get("REDIRECT_URL", "")
+                
+                if redirect_url:
+                    st.info("Redirecting you to the final questionnaire...")
+                    
+                    # Use JavaScript to redirect
+                    st.markdown(f"""
+                    <script>
+                        window.setTimeout(function() {{
+                            window.location.href = "{redirect_url}";
+                        }}, 3000);
+                    </script>
+                    """, unsafe_allow_html=True)
+                    
+                    st.write("If you are not redirected automatically, [click here](%s)." % redirect_url)
+                else:
+                    st.info("Thank you for participating! This session is now complete.")
+                
                 st.session_state['agentState'] = 'completed'
-                st.info("This session is now complete. Please close this page.")
+                
             else:
                 st.error("There was an error saving your data. Please try again.")
-                # Show troubleshooting tips
-                st.info("""
-                **Troubleshooting tips:**
-                1. Check your internet connection
-                2. Make sure the Google Sheet exists and is accessible
-                3. Try refreshing the page and submitting again
-                """)
 
 
 
