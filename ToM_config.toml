@@ -49,8 +49,8 @@ questions = [
     "Recall a time when you misunderstood another person or were surprised by their behavior. For instance, you may have believed someone was speaking badly about you when they weren’t, or you expected them to act a certain way but they reacted differently. Please exclude situations where the misunderstanding was simply about the meaning of a word or about them having a certain political ideology when this was not the case. Focus on a situation where someone said or did something you were not expecting. Could you describe what happened?",
     "Why did you assume something? Were you surprised when they behaved differently?",
     "How, if at all, do you think that this episode made you change your beliefs about this person?",
-    "Did you think this person had motivations, intentions, hidden aims or emotions behind what happened (e.g., they behaved like this because they were upset or because they wanted to make you change your mind)?",
-    "In general, to what extent do you think emotions, motivations, aims, and intentions are alike, and in what ways are they different? Could you expand on your reasoning?",
+    "Do you think this person had a reason, intention, or feeling behind what happened (for example, maybe they were upset or wanted you to change your mind)? If yes, which ones?",
+    "In your view, how is having a feeling (like being upset) similar to or different from having a reason or intention (like wanting someone to agree with you)?",
     "Going back to the situation you described, did you think about certain characteristics of this person (e.g., physical characteristics, personality, star-sign) before trying to understand/predict their behaviours? If yes, which ones?",
     "Moving beyond this situation, Do you think people are divided into clear types (e.g. sporty vs not sporty), can be seen on a scale (e.g. somewhere in between not very sporty and very sporty), or a mix of these? Can you give an example?",
     "Do you think it is easier to understand people who are similar to you? Why?",
@@ -122,10 +122,10 @@ Answer: "I assumed she was upset with me because that’s usually what I think i
 Question: How, if at all, do you think that this episode made you change your beliefs about this person?
 Answer: "It showed me she wasn’t being rude — she just gets absorbed in her own thoughts sometimes. I stopped taking her reactions so personally after that."
 
-Question:  Did you think this person had motivations, intentions, hidden aims or emotions behind what happened (e.g., they behaved like this because they were upset or because they wanted to make you change your mind)?
+Question:  Do you think this person had a reason, intention, or feeling behind what happened (for example, maybe they were upset or wanted you to change your mind)? If yes, which ones?
 Answer: "I thought they were upset and wanted me to notice that"
 
-Question:  How similar do you think emotions, motivations, aims and intentions are? Could you expand on why?
+Question:  In your view, how is having a feeling (like being upset) similar to or different from having a reason or intention (like wanting someone to agree with you)
 Answer: "I think they are kinda similar as in people feel them but usually you can be sad for something and that changes your intentions"
 
 Question: Going back to the situation you described, did you think about certain characteristics of this person (e.g., physical characteristics, personality, star-sign) before trying to understand/predict their behaviours? If yes, which ones?
