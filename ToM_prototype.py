@@ -685,9 +685,9 @@ def finaliseScenario(package):
     
     # Feedback input
     st.divider()
-    st.subheader("Final Feedback")
+    st.subheader("Summary Feedback")
     feedback_text = st.text_area(
-        "Please share your overall feedback on this experience:",
+        "Please share why you chose this summary over the others:",
         value=st.session_state.get('feedback_text', ''),
         height=100,
         key="final_feedback"
@@ -710,11 +710,11 @@ def finaliseScenario(package):
                 if redirect_url:
                     st.info("Redirecting you to the final questionnaire...")
                     
-                    # Use JavaScript to redirect
+                    # Use JavaScript to redirect - FIXED: Use single quotes for the inner string
                     st.markdown(f"""
                     <script>
                         window.setTimeout(function() {{
-                            window.location.href = "{redirect_url}";
+                            window.location.href = '{redirect_url}';
                         }}, 3000);
                     </script>
                     """, unsafe_allow_html=True)
