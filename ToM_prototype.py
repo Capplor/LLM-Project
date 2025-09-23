@@ -667,9 +667,14 @@ def finaliseScenario(package):
     Displays final scenario, answers, and collects feedback.
     Saves everything to Google Sheets when submitted.
     """
+    # Check if we've already submitted - if so, show only the completion page
+    if st.session_state.get('submitted', False):
+        show_completion_page()
+        return
+    
     st.header("Review and Submit Your Feedback")
     
-    # Show final scenario (removed the two-column layout)
+    # Show final scenario
     st.subheader("Final Scenario")
     scenario_text = st.text_area(
         "Edit your final scenario if needed:",
@@ -701,34 +706,68 @@ def finaliseScenario(package):
     if st.button("Submit All Feedback", type="primary", key="submit_feedback"):
         with st.spinner("Saving your data..."):
             if save_to_google_sheets(package):
-                st.success("Thank you! Your feedback has been submitted.")
-                st.balloons()
-                
-                # Get the secret URL from Streamlit secrets
-                redirect_url = st.secrets.get("REDIRECT_URL", "")
-                
-                if redirect_url:
-                    st.info("Redirecting you to the final questionnaire...")
-                    
-                    # Use JavaScript to redirect - FIXED: Use single quotes for the inner string
-                    st.markdown(f"""
-                    <script>
-                        window.setTimeout(function() {{
-                            window.location.href = '{redirect_url}';
-                        }}, 3000);
-                    </script>
-                    """, unsafe_allow_html=True)
-                    
-                    st.write("If you are not redirected automatically, [click here](%s)." % redirect_url)
-                else:
-                    st.info("Thank you for participating! This session is now complete.")
-                
+                # Mark as submitted and rerun to clear the screen
+                st.session_state['submitted'] = True
                 st.session_state['agentState'] = 'completed'
-                
+                st.rerun()
             else:
                 st.error("There was an error saving your data. Please try again.")
 
-
+def show_completion_page():
+    """
+    Shows only the completion message and redirect button, clearing everything else.
+    """
+    # Clear the main area by using empty containers
+    st.empty()
+    
+    # Center the content using columns
+    col1, col2, col3 = st.columns([1, 3, 1])
+    
+    with col2:
+        st.balloons()
+        st.success("🎉 Thank you! Your feedback has been submitted.")
+        
+        # Get the secret URL from Streamlit secrets
+        redirect_url = st.secrets.get("REDIRECT_URL", "")
+        
+        if redirect_url:
+            st.markdown("## Congratulations! You've completed the main study.")
+            st.markdown("### Final Step: Brief Questionnaire")
+            st.markdown("Please click the button below to complete a short final questionnaire. This should take about 5-10 minutes.")
+            
+            # Create a prominent button - using single quotes for the HTML string
+            st.markdown(
+                f'<div style="text-align: center; margin: 30px 0;">'
+                f'<a href="{redirect_url}" target="_blank">'
+                f'<button style="background-color: #4CAF50; color: white; padding: 20px 40px; border: none; border-radius: 10px; cursor: pointer; font-size: 20px; margin: 20px 0; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">'
+                f'🚀 Complete Final Questionnaire'
+                f'</button>'
+                f'</a>'
+                f'</div>',
+                unsafe_allow_html=True
+            )
+            
+            # Additional instructions
+            st.info(
+                "**Important:** \n"
+                "- The questionnaire will open in a new tab\n"
+                "- Please complete it now to finish your participation\n"
+                "- After submitting the questionnaire, you can close this window"
+            )
+            
+            # Alternative link
+            st.markdown(f"**If the button doesn't work, copy and paste this link into your browser:**")
+            st.code(redirect_url)
+        else:
+            st.info("Thank you for participating! This session is now complete.")
+        
+        # Option to start over (hidden by default, but available if needed)
+        with st.expander("Start a new session (for testing)"):
+            if st.button("Reset and Start Over"):
+                for key in list(st.session_state.keys()):
+                    del st.session_state[key]
+                st.session_state['agentState'] = 'start'
+                st.rerun()
 
 def stateAgent():
     """
