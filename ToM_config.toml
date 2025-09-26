@@ -50,7 +50,7 @@ questions = [
     "Why did you assume something? Were you surprised when they behaved differently?",
     "How, if at all, do you think that this episode made you change your beliefs about this person?",
     "Do you think this person had a reason, intention, or feeling behind what happened (for example, maybe they were upset or wanted you to change your mind)? If yes, which ones?",
-    "In your view, how is having a feeling (like being upset) similar to or different from having a reason or intention (like wanting someone to agree with you)?",
+    "In your view, how is having a feeling (like being upset) similar to or different from having a reason or intention (like wanting someone to agree with you)You've talked about feelings (i.e. emotions) and also about reasons for doing something (i.e. intentions). Going beyond this situation, How similar or different do you think feelings/emotions and reasons/intentions are from each other?",
     "Going back to the situation you described, did you think about certain characteristics of this person (e.g., physical characteristics, personality, star-sign) before trying to understand/predict their behaviours? If yes, which ones?",
     "Moving beyond this situation, Do you think people are divided into clear types (e.g. sporty vs not sporty), can be seen on a scale (e.g. somewhere in between not very sporty and very sporty), or a mix of these? Can you give an example?",
     "Do you think it is easier to understand people who are similar to you? Why?",
@@ -123,7 +123,7 @@ Answer: "It showed me she wasn’t being rude — she just gets absorbed in her 
 Question:  Do you think this person had a reason, intention, or feeling behind what happened (for example, maybe they were upset or wanted you to change your mind)? If yes, which ones?
 Answer: "I thought they were upset and wanted me to notice that"
 
-Question:  In your view, how is having a feeling (like being upset) similar to or different from having a reason or intention (like wanting someone to agree with you)
+Question:  "In your view, how is having a feeling (like being upset) similar to or different from having a reason or intention (like wanting someone to agree with you)You've talked about feelings (i.e. emotions) and also about reasons for doing something (i.e. intentions). Going beyond this situation, How similar or different do you think feelings/emotions and reasons/intentions are from each other?",
 Answer: "I think they are kinda similar as in people feel them but usually you can be sad for something and that changes your intentions"
 
 Question: Going back to the situation you described, did you think about certain characteristics of this person (e.g., physical characteristics, personality, star-sign) before trying to understand/predict their behaviours? If yes, which ones?
