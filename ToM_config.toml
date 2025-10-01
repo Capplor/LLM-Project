@@ -48,6 +48,7 @@ I'll start with gathering a specific situation you remember and then move onto m
 questions = [
     "Recall a time when you misunderstood another person or were surprised by their behavior. For instance, you may have believed someone was speaking badly about you when they weren’t, or you expected them to act a certain way but they reacted differently. Please exclude situations where the misunderstanding was simply about the meaning of a word or about them having a certain political ideology when this was not the case. Focus on a situation where someone said or did something you were not expecting. Could you describe what happened?",
     "Why did you assume something? Were you surprised when they behaved differently?",
+    "When you think about this situation, what aspects of the context influenced how you understood the other person’s behavior? For example, think about the setting where it happened, the person’s relationship with you and with others, and the broader social norms that might have been relevant. How did these factors shape the way you interpreted what was going on?",
     "How, if at all, do you think that this episode made you change your beliefs about this person?",
     "Do you think this person had a reason, intention, or feeling behind what happened (for example, maybe they were upset or wanted you to change your mind)? If yes, which ones?",
     "You've talked about feelings (i.e. emotions) and also about reasons for doing something (i.e. intentions). Going beyond this situation, How similar or different do you think feelings/emotions and reasons/intentions are from each other?",
@@ -74,6 +75,7 @@ If the human tries to ask you a question, politely refuse and return to the ques
 
 what = "What happened that led to the misunderstanding or the surprise?"
 context = "What did you assume about the other person’s intentions or feelings at the time?"
+environment = "What environmental or interpersonal factors contributed to the misunderstanding or surprise?"
 procedure = "How did you reach their conclusion and what changed?"
 mental_states= "What were the mental states and emotions behind these actions?"
 mind_vs_emo = "What are the similarities between mental states and emotions and how are they different?"
@@ -117,6 +119,9 @@ Answer: "A classmate didn’t wave back at me in the hallway, and I thought she 
 Question: Why did you assume something? Were you surprised when they behaved differently?
 Answer: "I assumed she was upset with me because that’s usually what I think if someone doesn’t acknowledge me. I was really surprised when she came up later and acted completely friendly."
 
+Question: When you think about this situation, what aspects of the context influenced how you understood the other person’s behavior? For example, think about the setting where it happened, the person’s relationship with you and with others, and the broader social norms that might have been relevant. How did these factors shape the way you interpreted what was going on?
+Answer: "I realized that the hallway was crowded and people were moving quickly, which may have made it easy to miss me. She’s someone I usually get along with, and I know she can be absent-minded sometimes. Thinking about how we normally interact and the usual expectations for politeness in school helped me see that maybe there was a simple explanation rather than her being upset."
+
 Question: How, if at all, do you think that this episode made you change your beliefs about this person?
 Answer: "It showed me she wasn’t being rude — she just gets absorbed in her own thoughts sometimes. I stopped taking her reactions so personally after that."
 
@@ -141,7 +146,8 @@ Answer: "No, I don’t think eye color or things like that matter. I think behav
 
 scenario = """
 I once thought a classmate was ignoring me when she didn’t wave back in the hallway. Later, she explained she hadn’t even noticed me because she was deep in thought about an exam. \
-I assumed she was upset with me, because that’s usually what I think when someone doesn’t acknowledge me. I was really surprised when she came up later and was completely friendly. \
+I assumed she was upset with me, because that’s usually what I think if someone doesn’t acknowledge me. I was really surprised when she came up later and acted completely friendly. \
+When reflecting on the situation, I realized that the hallway was crowded and people were moving quickly, which may have made it easy to miss me. She’s someone I usually get along with and I know she can be absent-minded sometimes. Thinking about our usual interactions and general social expectations for politeness helped me see that there could be a simple explanation rather than her being upset. \
 This experience showed me she wasn’t being rude — she just gets absorbed in her own thoughts sometimes. I stopped taking her reactions so personally after that. \
 At first, I believed she was upset and wanted me to notice it. \
 I think emotions, motivations, aims, and intentions are kind of similar because people feel them, but you can be sad about something and that can change your intentions. \
