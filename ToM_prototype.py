@@ -704,28 +704,29 @@ def finaliseScenario(package):
     st.session_state['feedback_text'] = feedback_text
     package["preference_feedback"] = feedback_text
     
-    # Submit button with loading state
-    if st.button("Submit All Feedback", type="primary", key="submit_feedback"):
-        with st.spinner("Saving your data..."):
-            if save_to_google_sheets(package):
-                # Mark as submitted and rerun to clear the screen
-                st.session_state['submitted'] = True
-                st.session_state['agentState'] = 'completed'
-                st.rerun()
-            else:
-                st.error("There was an error saving your data. Please try again.")
+    # Create a form for submission to ensure proper state handling
+    with st.form(key="final_feedback_form"):
+        submitted = st.form_submit_button("Submit All Feedback", type="primary")
+        
+        if submitted:
+            with st.spinner("Saving your data..."):
+                if save_to_google_sheets(package):
+                    # Mark as submitted
+                    st.session_state['submitted'] = True
+                    st.session_state['agentState'] = 'completed'
+                    # Use success message and force a rerun
+                    st.success("Thank you! Your feedback has been submitted.")
+                    st.balloons()
+                    st.rerun()
+                else:
+                    st.error("There was an error saving your data. Please try again.")
 
 def show_completion_page():
     """
     Shows only the completion message and redirect button, clearing everything else.
     """
-    # Clear the main area by using empty containers
-    st.empty()
-    
-    # Center the content using columns
-    col1, col2, col3 = st.columns([1, 3, 1])
-    
-    with col2:
+    # Use containers to create a clean layout
+    with st.container():
         st.balloons()
         st.success("🎉 Thank you! Your feedback has been submitted.")
         
@@ -737,7 +738,7 @@ def show_completion_page():
             st.markdown("### Final Step: Brief Questionnaire")
             st.markdown("Please click the button below to complete a short final questionnaire. This should take about 5-10 minutes.")
             
-            # Create a prominent button - using single quotes for the HTML string
+            # Create a prominent button
             st.markdown(
                 f'<div style="text-align: center; margin: 30px 0;">'
                 f'<a href="{redirect_url}" target="_blank">'
@@ -757,7 +758,7 @@ def show_completion_page():
                 "- After submitting the questionnaire, you can close this window"
             )
             
-            # Alternative link - now clickable
+            # Alternative link
             st.markdown(f"**If the button doesn't work, click the link below:**")
             st.markdown(f'<a href="{redirect_url}" target="_blank" style="font-size: 16px; color: #1f77b4;">{redirect_url}</a>', unsafe_allow_html=True)
             
@@ -771,7 +772,8 @@ def show_completion_page():
         with st.expander("Start a new session (for testing)"):
             if st.button("Reset and Start Over"):
                 for key in list(st.session_state.keys()):
-                    del st.session_state[key]
+                    if key not in ['consent']:
+                        del st.session_state[key]
                 st.session_state['agentState'] = 'start'
                 st.rerun()
 
