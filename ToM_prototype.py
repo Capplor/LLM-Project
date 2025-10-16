@@ -757,8 +757,12 @@ def show_completion_page():
                 "- After submitting the questionnaire, you can close this window"
             )
             
-            # Alternative link
-            st.markdown(f"**If the button doesn't work, copy and paste this link into your browser:**")
+            # Alternative link - now clickable
+            st.markdown(f"**If the button doesn't work, click the link below:**")
+            st.markdown(f'<a href="{redirect_url}" target="_blank" style="font-size: 16px; color: #1f77b4;">{redirect_url}</a>', unsafe_allow_html=True)
+            
+            # Also show the URL as code for easy copying
+            st.markdown("**Or copy and paste this link into your browser:**")
             st.code(redirect_url)
         else:
             st.info("Thank you for participating! This session is now complete.")
