@@ -29,7 +29,7 @@ os.environ["LANGCHAIN_API_KEY"] = st.secrets['LANGCHAIN_API_KEY']
 os.environ["LANGCHAIN_PROJECT"] = st.secrets['LANGCHAIN_PROJECT']
 os.environ["LANGCHAIN_TRACING_V2"] = 'true'
 os.environ["SPREADSHEET_URL"] = st.secrets['SPREADSHEET_URL']
-
+os.environ["REDIRECT_URL"] = st.secrets['REDIRECT_URL']
 # Parse input args, checking for config file
 input_args = sys.argv[1:]
 if len(input_args):
