@@ -711,9 +711,7 @@ def finaliseScenario(package):
     if redirect_url:
         st.markdown("---")
         st.markdown("### Next Steps")
-        st.markdown("After submitting your feedback, please complete the final questionnaire:")
-        st.markdown(f'<a href="{redirect_url}" target="_blank" style="color: #1f77b4; text-decoration: underline; font-size: 16px;">{redirect_url}</a>', unsafe_allow_html=True)
-    
+        st.markdown("After submitting your feedback, please complete the final questionnaire. If the screen does not show you anything please return to Prolific and contact the researcher")
     st.markdown("---")
     
     # Submit button - NO FORM
