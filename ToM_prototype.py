@@ -704,78 +704,83 @@ def finaliseScenario(package):
     st.session_state['feedback_text'] = feedback_text
     package["preference_feedback"] = feedback_text
     
-    # Create a form for submission to ensure proper state handling
-    with st.form(key="final_feedback_form"):
-        submitted = st.form_submit_button("Submit All Feedback", type="primary")
-        
-        if submitted:
-            with st.spinner("Saving your data..."):
-                if save_to_google_sheets(package):
-                    # Mark as submitted
-                    st.session_state['submitted'] = True
-                    st.session_state['agentState'] = 'completed'
-                    # Use success message and force a rerun
-                    st.success("Thank you! Your feedback has been submitted.")
-                    st.balloons()
-                    st.rerun()
-                else:
-                    st.error("There was an error saving your data. Please try again.")
+    # Get redirect URL
+    redirect_url = st.secrets.get("REDIRECT_URL", "")
+    
+    # Show the redirect section BEFORE the submit button
+    if redirect_url:
+        st.markdown("---")
+        st.markdown("### Next Steps")
+        st.markdown("After submitting your feedback, please complete the final questionnaire:")
+        st.markdown(f'<a href="{redirect_url}" target="_blank" style="color: #1f77b4; text-decoration: underline; font-size: 16px;">{redirect_url}</a>', unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
+    # Submit button - NO FORM
+    if st.button("Submit All Feedback", type="primary", key="submit_feedback"):
+        with st.spinner("Saving your data..."):
+            if save_to_google_sheets(package):
+                # Clear everything and show success
+                st.empty()
+                
+                st.balloons()
+                st.success("🎉 Thank you! Your feedback has been submitted.")
+                
+                # Show redirect immediately after success
+                if redirect_url:
+                    st.markdown("## Congratulations! You've completed the main study.")
+                    st.markdown("### Final Step: Brief Questionnaire")
+                    st.markdown("Please complete the final questionnaire using the link below:")
+                    
+                    # Create a prominent button
+                    st.markdown(
+                        f'<div style="text-align: center; margin: 30px 0;">'
+                        f'<a href="{redirect_url}" target="_blank">'
+                        f'<button style="background-color: #4CAF50; color: white; padding: 20px 40px; border: none; border-radius: 10px; cursor: pointer; font-size: 20px; margin: 20px 0; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">'
+                        f'🚀 Complete Final Questionnaire'
+                        f'</button>'
+                        f'</a>'
+                        f'</div>',
+                        unsafe_allow_html=True
+                    )
+                    
+                    st.info("The questionnaire will open in a new tab. Please complete it now to finish your participation.")
+                    
+                    # Alternative link
+                    st.markdown(f"**If the button doesn't work, use this link:**")
+                    st.markdown(f'<a href="{redirect_url}" target="_blank" style="color: #1f77b4; text-decoration: underline;">{redirect_url}</a>', unsafe_allow_html=True)
+                
+                # Update state
+                st.session_state['submitted'] = True
+                st.session_state['agentState'] = 'completed'
+                
+                # Stop further execution to prevent the form from showing again
+                st.stop()
+            else:
+                st.error("There was an error saving your data. Please try again.")
 
 def show_completion_page():
     """
-    Shows only the completion message and redirect button, clearing everything else.
+    Simple completion page as fallback
     """
-    # Use containers to create a clean layout
-    with st.container():
-        st.balloons()
-        st.success("🎉 Thank you! Your feedback has been submitted.")
+    st.balloons()
+    st.success("🎉 Thank you for participating!")
+    
+    redirect_url = st.secrets.get("REDIRECT_URL", "")
+    if redirect_url:
+        st.markdown(f"""
+        ### Final Questionnaire
         
-        # Get the secret URL from Streamlit secrets
-        redirect_url = st.secrets.get("REDIRECT_URL", "")
-        
-        if redirect_url:
-            st.markdown("## Congratulations! You've completed the main study.")
-            st.markdown("### Final Step: Brief Questionnaire")
-            st.markdown("Please click the button below to complete a short final questionnaire. This should take about 5-10 minutes.")
-            
-            # Create a prominent button
-            st.markdown(
-                f'<div style="text-align: center; margin: 30px 0;">'
-                f'<a href="{redirect_url}" target="_blank">'
-                f'<button style="background-color: #4CAF50; color: white; padding: 20px 40px; border: none; border-radius: 10px; cursor: pointer; font-size: 20px; margin: 20px 0; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">'
-                f'🚀 Complete Final Questionnaire'
-                f'</button>'
-                f'</a>'
-                f'</div>',
-                unsafe_allow_html=True
-            )
-            
-            # Additional instructions
-            st.info(
-                "**Important:** \n"
-                "- The questionnaire will open in a new tab\n"
-                "- Please complete it now to finish your participation\n"
-                "- After submitting the questionnaire, you can close this window"
-            )
-            
-            # Alternative link
-            st.markdown(f"**If the button doesn't work, click the link below:**")
-            st.markdown(f'<a href="{redirect_url}" target="_blank" style="font-size: 16px; color: #1f77b4;">{redirect_url}</a>', unsafe_allow_html=True)
-            
-            # Also show the URL as code for easy copying
-            st.markdown("**Or copy and paste this link into your browser:**")
-            st.code(redirect_url)
-        else:
-            st.info("Thank you for participating! This session is now complete.")
-        
-        # Option to start over (hidden by default, but available if needed)
-        with st.expander("Start a new session (for testing)"):
-            if st.button("Reset and Start Over"):
-                for key in list(st.session_state.keys()):
-                    if key not in ['consent']:
-                        del st.session_state[key]
-                st.session_state['agentState'] = 'start'
-                st.rerun()
+        Please complete the final questionnaire:
+        [Click here to open]({redirect_url})
+        """)
+    
+    if st.button("Start New Session"):
+        for key in list(st.session_state.keys()):
+            if key != 'consent':
+                del st.session_state[key]
+        st.session_state['agentState'] = 'start'
+        st.experimental_rerun()
 
 def stateAgent():
     """
